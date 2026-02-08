@@ -34,13 +34,15 @@ services:
        - ./server/vwh:/var/www/html/
     restart: unless-stopped
 
-  api:
-    build:
-      context: ./suggestions-api
-      dockerfile: DockerfileAPI
-    expose:
-      - 8000
-    volumes:
-      - ./suggestions-api/src:/app
-    restart: unless-stopped
-    command: uvicorn api:app --host 0.0.0.0 --port 8000 --workers 1
+  # Suggestions API - commented out due to heavy PyTorch/CUDA dependencies (~2GB)
+  # api:
+  #   build:
+  #     context: ./suggestions-api
+  #     dockerfile: DockerfileAPI
+  #   expose:
+  #     - 8000
+  #   volumes:
+  #     - ./suggestions-api/src:/app
+  #   restart: unless-stopped
+  #   command: uvicorn api:app --host 0.0.0.0 --port 8000 --workers 1
+

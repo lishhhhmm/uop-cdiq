@@ -1,0 +1,17 @@
+{
+  "name": "cdiq-cloudflare",
+  "version": "1.0.0",
+  "description": "Career Fair Interview Queue System - Cloudflare Workers",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 execute cdiq-db --local --file=./schema.sql",
+    "db:seed": "wrangler d1 execute cdiq-db --local --file=./seed.sql"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240614.0",
+    "typescript": "^5.5.0",
+    "wrangler": "^3.60.0"
+  }
+}
