@@ -8,7 +8,7 @@ const iwer_form = document.getElementById('iwer_form');
 const iwee_filter = document.getElementById('iwee_filter');
 const iwee_select = document.getElementById('iwee_select');
 const iwee_buttons = document.getElementById('iwee_buttons');
-	const iwee_button_active_inactive = document.getElementById('iwee_button_active_inactive');
+const iwee_button_active_inactive = document.getElementById('iwee_button_active_inactive');
 const iwee_notice = document.getElementById('iwee_notice');
 
 const iwer_fieldset = document.getElementById('iwer_fieldset');
@@ -28,13 +28,13 @@ const iwer_info_dialog_id = document.getElementById('iwer_info_dialog_id');
 // 	}
 // });
 
-display( true, [iwee_filter, iwee_select, iwer_fieldset, iwer_buttons]);
+display(true, [iwee_filter, iwee_select, iwer_fieldset, iwer_buttons]);
 display(false, [iwee_buttons, iwee_notice, iwer_checkboxes]);
 
 // ...
 
 const iwee_option_empty = iwee_select.appendChild(document.createElement('option'));
-iwee_option_empty.text = 'Select an Interviewee';
+iwee_option_empty.text = 'Select a Candidate';
 iwee_option_empty.selected = true;
 iwee_option_empty.value = null;
 
@@ -49,11 +49,11 @@ iwee_filter.addEventListener('input', function () {
 	iwee_filter.value = iwee_filter.value.trim();
 
 	if (this.value === '') {
-		display( true, [iwee_select, iwer_fieldset]);
+		display(true, [iwee_select, iwer_fieldset]);
 		display(false, [iwee_notice]);
 
 		display(true, iwee_select.options);
-		
+
 		iwee_option_empty.selected = true;
 		iwee_select.dispatchEvent(new Event('change'));
 
@@ -62,16 +62,16 @@ iwee_filter.addEventListener('input', function () {
 
 	// else the filter has contents
 
-	let options_on  = [];
+	let options_on = [];
 	let options_off = [iwee_option_empty];
 
 	for (let i = 0; i < iwee_select.options.length; i++) {
-		if(i == iwee_option_empty.index) {
+		if (i == iwee_option_empty.index) {
 			continue;
 		}
-		
+
 		const oi = iwee_select.options[i];
-		
+
 		if (oi.text.indexOf(this.value) === -1) {
 			options_off.push(oi);
 		}
@@ -80,18 +80,18 @@ iwee_filter.addEventListener('input', function () {
 		}
 	}
 
-	display( true, options_on);
+	display(true, options_on);
 	display(false, options_off);
 
 	if (options_on.length === 0) {
-		display( true, [iwee_notice]);
+		display(true, [iwee_notice]);
 		display(false, [iwee_select, iwer_fieldset]);
 
-		iwee_notice.innerText = 'An Interviewee with email "' + this.value + '" will be created, there is not an existing one.';
+		iwee_notice.innerText = 'A Candidate with email "' + this.value + '" will be created, there is not an existing one.';
 		iwee_option_empty.selected = true;
 	}
 	else {
-		display( true, [iwee_select, iwer_fieldset]);
+		display(true, [iwee_select, iwer_fieldset]);
 		display(false, [iwee_notice]);
 
 		options_on[0].selected = true;
@@ -101,28 +101,28 @@ iwee_filter.addEventListener('input', function () {
 });
 
 iwer_filter.addEventListener('input', function () {
-	
-	if(iwer_checkboxes.children.length === 0) {
-		display( true, [iwer_buttons]);
+
+	if (iwer_checkboxes.children.length === 0) {
+		display(true, [iwer_buttons]);
 		display(false, [iwer_checkboxes]);
 
 		return;
 	}
 
 	if (iwer_filter.value.trim() === '') {
-		display( true, iwer_checkboxes.children);
-		display( true, [iwer_checkboxes]);
+		display(true, iwer_checkboxes.children);
+		display(true, [iwer_checkboxes]);
 		display(false, [iwer_buttons]);
-		
+
 		return;
 	}
-	
-	let options_on  = [];
+
+	let options_on = [];
 	let options_off = [];
 
 	Object.keys(interviewers).forEach(function (id) {
 		const iwer = interviewers[id];
-		
+
 		if (iwer['element_p'].innerHTML.toLowerCase().indexOf(iwer_filter.value.toLowerCase()) === -1) {
 			options_off.push(iwer['element_label']);
 		}
@@ -131,17 +131,17 @@ iwer_filter.addEventListener('input', function () {
 		}
 	});
 
-	display( true, options_on);
+	display(true, options_on);
 	display(false, options_off);
 
 	let condition = options_on.length === 0;
 
-	display( condition, [iwer_buttons]);
+	display(condition, [iwer_buttons]);
 	display(!condition, [iwer_checkboxes]);
 });
 
 iwee_select.addEventListener('change', function () {
-	
+
 	let iwer_ids = Object.keys(interviewers);
 
 	iwer_ids.forEach(id => {
@@ -150,20 +150,20 @@ iwee_select.addEventListener('change', function () {
 		iwer_checkbox.checked = false;
 	});
 
-	if(iwee_option_empty.selected === false) {
+	if (iwee_option_empty.selected === false) {
 		iwee_button_active_inactive.innerHTML = interviewees[iwee_select.value]['active'] === true ? "Pause" : "Unpause";
 
 		interviews.forEach(iw => {
 			let iwer = interviewers[iw['id_interviewer']];
 			let iwee = interviewees[iw['id_interviewee']];
-	
-			if(iwee['element_option'].selected === false) {
+
+			if (iwee['element_option'].selected === false) {
 				return;
 			}
-	
+
 			iwer['element_input'].checked = true;
-	
-			if(iw['state_'] !== 'ENQUEUED') {
+
+			if (iw['state_'] !== 'ENQUEUED') {
 				iwer['element_input'].disabled = true;
 			}
 		});
@@ -181,7 +181,7 @@ iwee_select.addEventListener('change', function () {
 iwer_button_add.addEventListener('click', function () {
 	display(false, [iwer_info_dialog_delete]);
 
-	if(iwer_info_dialog_id.value === 'null') {
+	if (iwer_info_dialog_id.value === 'null') {
 		document.getElementById('iwer_info_dialog_name').value = iwer_filter.value.trim();
 	}
 
@@ -193,38 +193,38 @@ iwer_button_add.addEventListener('click', function () {
 form.addEventListener("submit", function (event) {
 	confirm_message = (() => { // TODO rework to be button based
 		let ret_value = null;
-		
+
 		let option_selected = iwee_select.options[iwee_select.selectedIndex];
-		
-		if(option_selected === undefined) {
-			return ret_value;
-		}
-		
-		let button = event.submitter;
-		
-		let button_active_inactive = document.getElementById('iwee_button_active_inactive');
-		let button_delete = document.getElementById('iwee_button_delete');
-		let button_update = document.getElementById('form_button_update');
-		
-		if([button_active_inactive, button_delete, button_update].indexOf(button) === -1) {
+
+		if (option_selected === undefined) {
 			return ret_value;
 		}
 
-		if(option_selected === iwee_option_empty) {
-			if(button === button_update && iwee_filter.value !== '') {
-				ret_value = 'CREATING an interviewee with email "' + iwee_filter.value + '".';
+		let button = event.submitter;
+
+		let button_active_inactive = document.getElementById('iwee_button_active_inactive');
+		let button_delete = document.getElementById('iwee_button_delete');
+		let button_update = document.getElementById('form_button_update');
+
+		if ([button_active_inactive, button_delete, button_update].indexOf(button) === -1) {
+			return ret_value;
+		}
+
+		if (option_selected === iwee_option_empty) {
+			if (button === button_update && iwee_filter.value !== '') {
+				ret_value = 'CREATING a candidate with email "' + iwee_filter.value + '".';
 			}
 		}
 		else { // if(option_selected !== iwee_option_empty) => some interviewee
 			let interviewee_selected = interviewees[option_selected.value];
 
-			if(button === button_update) {
+			if (button === button_update) {
 				ret_value = 'UPDATING';
 			}
-			else if(button === button_active_inactive) {
+			else if (button === button_active_inactive) {
 				ret_value = (interviewee_selected.active === true ? "pausing" : "unpausing");
 			}
-			else if(button === button_delete) {
+			else if (button === button_delete) {
 				ret_value = 'DELETING';
 			}
 			else {
@@ -240,10 +240,10 @@ form.addEventListener("submit", function (event) {
 	submiting(form, confirm_message, null, event);
 });
 
-iwer_form.addEventListener("submit", function(event) {
+iwer_form.addEventListener("submit", function (event) {
 	let button = event.submitter;
 
-	if(button === document.getElementById('iwer_info_dialog_abort')) {
+	if (button === document.getElementById('iwer_info_dialog_abort')) {
 		iwer_info_dialog.close();
 		iwer_form.reset();
 
@@ -254,13 +254,13 @@ iwer_form.addEventListener("submit", function(event) {
 	let button_delete = document.getElementById('iwer_info_dialog_delete');
 
 	confirm_message = (() => {
-		if(button === button_confirm && iwer_info_dialog_id.value === 'null') {
+		if (button === button_confirm && iwer_info_dialog_id.value === 'null') {
 			return '// TODO confirmation message of what ADDING';
 		}
-		if(button === button_confirm /* && iwer_info_dialog_id.value !== 'null' */) {
+		if (button === button_confirm /* && iwer_info_dialog_id.value !== 'null' */) {
 			return '// TODO confirmation message of what EDITING';
 		}
-		else if(button === button_delete) {
+		else if (button === button_delete) {
 			return '// TODO confirmation message of what DELETING';
 		}
 		return null;
@@ -275,31 +275,31 @@ iwer_form.addEventListener("submit", function(event) {
 // ...
 
 function update(data) {
-	
+
 	interviews = data['interview'];
 
 	// ---
 
 	let interviewee_ids_to_delete = Object.keys(interviewees);
 
-	data['interviewee'].forEach(function (iwee_row) { 
+	data['interviewee'].forEach(function (iwee_row) {
 
 		let interviewee = interviewees[iwee_row['id']];
 
-		if(interviewee === undefined) {
+		if (interviewee === undefined) {
 			interviewee =
-			interviewees[iwee_row['id']] = {
-				'id': iwee_row['id'],
-				'email': iwee_row['email'],
-				'element_option': document.createElement('option')
-			};
+				interviewees[iwee_row['id']] = {
+					'id': iwee_row['id'],
+					'email': iwee_row['email'],
+					'element_option': document.createElement('option')
+				};
 
 			interviewee['element_option'].value = interviewee['id'];
 			interviewee['element_option'].text = interviewee['id'] + ' | ' + interviewee['email'];
 
 			iwee_select.appendChild(interviewee['element_option']);
 
-			if(iwee_option_empty.selected === true) {
+			if (iwee_option_empty.selected === true) {
 				iwee_filter.dispatchEvent(new Event('input'));
 			}
 		}
@@ -312,12 +312,12 @@ function update(data) {
 	});
 
 	interviewee_ids_to_delete.forEach(function (id) {
-		if(interviewees[id]['element_option'].selected === true) {
+		if (interviewees[id]['element_option'].selected === true) {
 			iwee_option_empty.selected = true;
 			iwee_select.dispatchEvent(new Event('change'));
 
 			iwee_select.removeChild(interviewees[id]['element_option']);
-			
+
 			iwee_filter.dispatchEvent(new Event('input'));
 		}
 		else {
@@ -334,7 +334,7 @@ function update(data) {
 
 		let interviewer = interviewers[iwer_row['id']];
 
-		if(interviewer === undefined) {
+		if (interviewer === undefined) {
 
 			interviewer = interviewers[iwer_row['id']] = {
 				'id': iwer_row['id'],
@@ -352,14 +352,14 @@ function update(data) {
 			);
 
 			interviewer['element_label'].htmlFor =
-			interviewer['element_input'].value =
-			interviewer['element_input'].id =
-			interviewer['id'];
+				interviewer['element_input'].value =
+				interviewer['element_input'].id =
+				interviewer['id'];
 
 			interviewer['element_input'].type = "checkbox";
 			interviewer['element_input'].name = "interviewers[]";
-			interviewer['element_input'].addEventListener('click', function(event) {
-				if(iwee_option_empty.selected === true) {
+			interviewer['element_input'].addEventListener('click', function (event) {
+				if (iwee_option_empty.selected === true) {
 					event.preventDefault();
 
 					iwer_info_dialog_id.value = interviewer['id'];
@@ -367,7 +367,7 @@ function update(data) {
 					document.getElementById('iwer_info_dialog_table').value = interviewer['table'];
 
 					iwer_button_add.dispatchEvent(new Event("click"));
-					
+
 					display(true, [iwer_info_dialog_delete]);
 				}
 			});
@@ -378,7 +378,7 @@ function update(data) {
 		else {
 			interviewer_ids_to_delete.splice(interviewer_ids_to_delete.indexOf(interviewer['id'].toString()), 1);
 		}
-	
+
 		// update fields even tho they may no need to be updated
 		// backend doesn't say what changed, just sends all each time
 
@@ -392,9 +392,9 @@ function update(data) {
 		interviewer['element_p'].style.lineHeight = '1.5rem';
 		interviewer['element_p'].innerHTML =
 			interviewer['name'] + "<br>Table: " + interviewer['table'];
-		
+
 		// was moved from enqueued, but got dequeued
-		if(interviewer['element_input'].disabled === true) {
+		if (interviewer['element_input'].disabled === true) {
 			interviewer['element_input'].disabled = false;
 			interviewer['element_input'].checked = interviewer['active'] === false;
 		}
@@ -410,17 +410,17 @@ function update(data) {
 
 	// ===
 
-	if(iwee_option_empty.selected === false) {
+	if (iwee_option_empty.selected === false) {
 		iwee_button_active_inactive.innerHTML = interviewees[iwee_select.value]['active'] === true ? "Pause" : "Unpause";
 
 		interviews.forEach(iw => {
 			let iwee = interviewees[iw['id_interviewee']];
-			
-			if(iwee['element_option'].selected === false) {
+
+			if (iwee['element_option'].selected === false) {
 				return;
 			}
-			
-			if(iw['state_'] !== 'ENQUEUED') {
+
+			if (iw['state_'] !== 'ENQUEUED') {
 				let iwer = interviewers[iw['id_interviewer']];
 				iwer['element_input'].disabled = true;
 				iwer['element_input'].checked = true;

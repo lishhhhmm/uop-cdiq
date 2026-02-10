@@ -1,14 +1,61 @@
 :root {
-	--color-white: rgb(255, 255, 255);
-	--color-black: rgb(0, 0, 0);
-	
-	--color-primary: rgb(165, 26, 25);
-	--color-accent: rgb(233, 79, 13);
+	/* Light Theme Base */
+	--bg-primary: #ffffff;
+	--bg-secondary: #f8fafc;
+	--bg-card: #ffffff;
 
-	--color-status--unavailable: rgb(102, 102, 102);
-	--color-status--available: rgb(0, 189, 196);
-	--color-status--calling: rgb(0, 183, 46);
-	--color-status--decision: rgb(220, 117, 0);
-	--color-status--happening: rgb(202, 24, 1);
-	--color-status--completed: rgb(145, 0, 150);
+	/* Legacy aliases */
+	--color-white: #ffffff;
+	--color-black: #1e293b;
+
+	/* Branding Colors from Poster */
+	--brand-maroon: #9D1C20;
+	--brand-orange: #F47920;
+	--brand-green: #88C540;
+	--brand-yellow: #FFC00F;
+
+	/* Accent Colors (Branding) */
+	--accent-primary: var(--brand-maroon);
+	--accent-secondary: var(--brand-orange);
+	--color-primary: var(--brand-maroon);
+	--color-primary-dark: #81191c;
+	--color-accent: var(--brand-orange);
+	--color-accent-light: #f6945a;
+
+	/* Text */
+	--text-primary: #1e293b;
+	--text-secondary: #475569;
+
+	/* Functional Status Colors (Distinguishable from Branding) */
+	--color-status--unavailable: #64748b;
+	/* Slate */
+	--color-status--available: #0ea5e9;
+	/* Sky Blue */
+	--color-status--calling: #10b981;
+	/* Emerald Green */
+	--color-status--decision: #f59e0b;
+	/* Amber */
+	--color-status--happening: #ef4444;
+	/* Red */
+	--color-status--completed: #a855f7;
+	/* Purple */
+
+	/* Borders & Shadows */
+	--border: #e2e8f0;
+	--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+	--shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+	--shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+	--glow-calling: 0 0 20px rgba(16, 185, 129, 0.3);
+	--glow-decision: 0 0 20px rgba(245, 158, 11, 0.3);
+	--glow-happening: 0 0 20px rgba(239, 68, 68, 0.3);
+
+	/* Border Radius */
+	--radius-sm: 0.375rem;
+	--radius-md: 0.5rem;
+	--radius-lg: 0.75rem;
+	--radius-xl: 1rem;
+
+	/* Transitions */
+	--transition-fast: 150ms ease;
+	--transition-normal: 300ms ease;
 }
