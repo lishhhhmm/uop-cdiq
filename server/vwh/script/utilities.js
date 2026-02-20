@@ -16,6 +16,11 @@ function dialog_create(message) {
 function dialog_create_closable(message) {
 	let dialog = dialog_create(message);
 
+	// Add click-to-close behavior (standardized)
+	dialog.onclick = function (event) {
+		if (event.target === this) this.close();
+	};
+
 	let close_button = document.createElement('button');
 	close_button.innerHTML = 'Continue';
 	close_button.addEventListener('click', () => {
@@ -36,10 +41,10 @@ function qr_generate(url, img) {
 function copy_to_clipboard(text) {
 	navigator.clipboard.writeText(text)
 		.then(
-			function() {
+			function () {
 				alert("Copied!");
 			},
-			function() {
+			function () {
 				alert("Can't Copy!");
 			}
 		);

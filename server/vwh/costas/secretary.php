@@ -275,7 +275,7 @@ $a->body_main = function () { ?>
 
 	</form>
 
-	<dialog id="iwer_info_dialog" onclick="if(event.target===this)this.close();">
+	<dialog id="iwer_info_dialog" onclick="if(event.target===this)this.close();" style="min-width: 500px;">
 		<button type="button" class="dialog-close" onclick="this.closest('dialog').close();" aria-label="Close">×</button>
 		<form id="iwer_form" method="dialog" style="display: flex; flex-direction: column; gap: 1rem;">
 
@@ -308,6 +308,16 @@ $a->body_main = function () { ?>
 				<span id="iwer_image_filename" style="font-size: 0.875rem; color: var(--text-secondary);">No file
 					selected</span>
 			</div>
+
+			<label for="iwer_info_dialog_token" style="display: flex; flex-direction: column; gap: 0.5rem;">
+				<span>Access Token (10 min):</span>
+				<div style="display: flex; gap: 0.5rem;">
+					<input type="text" id="iwer_info_dialog_token" name="iwer_info_dialog_token" readonly
+						placeholder="No active token">
+					<button type="submit" id="iwer_info_dialog_generate_token" name="iwer_info_dialog_generate_token"
+						style="white-space: nowrap;">Generate</button>
+				</div>
+			</label>
 
 			<button type="button" onclick="
 				window.location.href = '/costas/secretary.php?interviewer_id=' + encodeURIComponent(document.getElementById('iwer_info_dialog_id').value);

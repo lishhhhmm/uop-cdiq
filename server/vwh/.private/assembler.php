@@ -33,13 +33,19 @@ class Assembler
 	public function assemble(): void
 	{
 		header('cache-control: no-cache, no-store, must-revalidate');
+
+		// Conditional background logic
+		$uri = $_SERVER['REQUEST_URI'];
+		$path = parse_url($uri, PHP_URL_PATH);
+		$show_bg = ($path === '/' || $path === '/index.php' || strpos($path, '/suggestions.php') === 0);
+		$body_class = $show_bg ? 'bg-pattern' : '';
 		?>
 		<!DOCTYPE html>
 		<html lang="en">
 
 		<head><?php $this->head(); ?></head>
 
-		<body><?php $this->body(); ?></body>
+		<body class="<?= $body_class ?>"><?php $this->body(); ?></body>
 
 		</html>
 		<?php
@@ -57,6 +63,7 @@ class Assembler
 			<link rel="shortcut icon" href="/resources/favicon/shiny.svg?cachebuster=<?= date("YmdH") ?>" type="image/x-icon">
 		<?php } ?>
 		<title><?= $this->head_title ?></title>
+		<script src="/script/header.js" defer></script>
 		<?php
 	}
 
@@ -64,22 +71,39 @@ class Assembler
 	{
 		?>
 
-		<header>
-			<nav class="main-nav"><?= $this->body_header_nav() ?></nav>
+		<nav class="glass-nav">
+			<div class="nav-content">
+				<div class="nav-main-row">
+					<div class="header-logos">
+						<a href="https://careerday.fet.uop.gr/" class="logo-link" style="box-shadow: none;">
+							<h2 class="animate-fade-in">Career Fair <span class="gradient-text">2026</span></h2>
+						</a>
+						<a href="https://www.uop.gr/sholi-oikonomias-kai-tehnologias" target="_blank" style="box-shadow: none;">
+							<img src="/resources/images/UOP.svg" alt="UoP Logo" class="nav-logo">
+						</a>
+						<a href="https://unistarthubs.gr/en/" target="_blank" style="box-shadow: none;">
+							<img src="/resources/images/UNISTART.svg" alt="UniStart Logo" class="nav-logo">
+						</a>
+					</div>
 
-			<hr>
-
-			<div class="header_title_container">
-				<div class="polygon polygon_accent"></div>
-				<div class="polygon polygon_primary"></div>
-				<h1 class="text"><?= $this->body_header_title ?></h1>
+					<button class="hamburger" aria-label="Toggle menu">
+						<span></span><span></span><span></span>
+					</button>
+					<div class="nav-links">
+						<?= $this->body_header_nav() ?>
+					</div>
+				</div>
 			</div>
-		</header>
+		</nav>
+
+		<div style="text-align: center; margin-top: 2rem; margin-bottom: 2rem;">
+			<h1 class="text-primary"><?= $this->body_header_title ?></h1>
+		</div>
 
 		<hr>
 
 		<main id="<?= $this->body_main_id ?>">
-			<?= call_user_func($this->body_main); ?>
+			<?php ($this->body_main)(); ?>
 		</main>
 
 		<div class="spacer"></div>
@@ -88,7 +112,8 @@ class Assembler
 
 		<footer>
 			<p style="text-align: center;">
-				<a href="https://www.uop.gr/">University of the Peloponnese</a> © Career Fair 2026 Interview Hub
+				<a href="https://www.uop.gr/">University of the Peloponnese</a> © Career Fair 2026 • <strong>Interview
+					Hub</strong>
 			</p>
 		</footer>
 
@@ -105,8 +130,8 @@ class Assembler
 		}
 		?>
 		<a href="/">Home</a>
-		<a href="/queues.php">Interviews</a>
-		<a href="/companies.php">Companies</a>
+		<a href="/queues.php" class="btn-hub">Interviews</a>
+		<a href="https://careerday.fet.uop.gr/companies.php">Companies</a>
 		<a href="/suggestions.php">Suggestions</a>
 		<?php
 	}
@@ -117,6 +142,7 @@ enum Operator: string
 {
 	case Secretary = 'secretary';
 	case Gatekeeper = 'gatekeeper';
+	case Company = 'company';
 }
 
 class AssemblerOperate extends Assembler
@@ -185,6 +211,21 @@ class AssemblerOperate extends Assembler
 		exit;
 	}
 
+	public function company_challenge(string $token): false
+	{
+		require_once $_SERVER['DOCUMENT_ROOT'] . '/.private/database.php';
+
+		$company_id = database()->company_mapping($token);
+
+		if ($company_id === false) {
+			return false;
+		}
+
+		$_SESSION[AssemblerOperate::$SESSION_OPERATOR_ARRAY][Operator::Company->value] = $company_id;
+		header("Location: /company_dashboard.php");
+		exit;
+	}
+
 	public static function operator_is(Operator $operator): bool
 	{
 		require_once $_SERVER['DOCUMENT_ROOT'] . '/.private/database.php';
@@ -193,9 +234,20 @@ class AssemblerOperate extends Assembler
 			session_start();
 		}
 
-		return isset($_SESSION[AssemblerOperate::$SESSION_OPERATOR_ARRAY]) === true
-			&& isset($_SESSION[AssemblerOperate::$SESSION_OPERATOR_ARRAY][$operator->value]) === true
-			&& database()->operator_still_alive($_SESSION[AssemblerOperate::$SESSION_OPERATOR_ARRAY][$operator->value]) === true;
+		if (
+			isset($_SESSION[AssemblerOperate::$SESSION_OPERATOR_ARRAY]) === false
+			|| isset($_SESSION[AssemblerOperate::$SESSION_OPERATOR_ARRAY][$operator->value]) === false
+		) {
+			return false;
+		}
+
+		$session_val = $_SESSION[AssemblerOperate::$SESSION_OPERATOR_ARRAY][$operator->value];
+
+		if ($operator === Operator::Company) {
+			return database()->company_still_alive(intval($session_val));
+		}
+
+		return database()->operator_still_alive($session_val);
 	}
 
 	public function operator_ensure(Operator $operator)
@@ -210,6 +262,47 @@ class AssemblerOperate extends Assembler
 	{
 		unset($_SESSION[AssemblerOperate::$SESSION_OPERATOR_ARRAY]);
 		$_SESSION[AssemblerOperate::$SESSION_OPERATOR_ARRAY] = [];
+	}
+
+	public static function company_id(): ?int
+	{
+		return $_SESSION[AssemblerOperate::$SESSION_OPERATOR_ARRAY][Operator::Company->value] ?? null;
+	}
+
+}
+
+class AssemblerOperateCompany extends AssemblerOperate
+{
+
+	public function __construct()
+	{
+		parent::__construct("Company Dashboard");
+	}
+
+	public function assemble(): void
+	{
+		$this->operator_ensure(Operator::Company);
+		parent::assemble();
+	}
+
+	public function operator_ensure(Operator $operator): void
+	{
+		if (self::operator_is($operator) === false) {
+			header("Location: /company_login.php");
+			exit;
+		}
+	}
+
+	protected function head(): void
+	{
+		parent::head();
+		?>
+		<style>
+			html {
+				scrollbar-gutter: stable;
+			}
+		</style>
+		<?php
 	}
 
 }
@@ -228,7 +321,7 @@ class AssemblerOperateSecretary extends AssemblerOperate
 		?>
 		<style>
 			html {
-				scrollbar-gutter: stable both-edges;
+				scrollbar-gutter: stable;
 			}
 		</style>
 		<?php

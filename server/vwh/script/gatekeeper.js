@@ -408,20 +408,7 @@ btn_complete_and_pause.addEventListener('click', () => {
 	form_button_to_completed_and_pause.click();
 });
 
-// Click outside to close for dialogs
-[dialog, dialog_pause_confirm].forEach(d => {
-	d.addEventListener('click', (event) => {
-		const rect = d.getBoundingClientRect();
-		if (
-			event.clientX < rect.left ||
-			event.clientX > rect.right ||
-			event.clientY < rect.top ||
-			event.clientY > rect.bottom
-		) {
-			d.close();
-		}
-	});
-});
+// Click outside to close for dialogs is handled in HTML via onclick
 
 // ===
 

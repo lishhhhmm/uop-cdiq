@@ -46,7 +46,7 @@ $a->body_main = function () { ?>
 		<p id="no_interviewers_message">No Interviewers in the system.</p>
 	</div>
 
-	<dialog id="dialog_action">
+	<dialog id="dialog_action" onclick="if(event.target===this)this.close();">
 		<form id="dialog_action_form" method="dialog" style="display: flex; flex-direction: column; gap: 0.75rem;">
 			<input id="input_interview_id" name="input_interview_id" type="text" value="null" hidden>
 			<input id="input_interviewer_id" name="input_interviewer_id" type="text" value="null" hidden>
@@ -87,7 +87,7 @@ $a->body_main = function () { ?>
 	</dialog>
 
 	<!-- Pause Confirmation Dialog -->
-	<dialog id="dialog_pause_confirm">
+	<dialog id="dialog_pause_confirm" onclick="if(event.target===this)this.close();">
 		<div style="display: flex; flex-direction: column; gap: 1rem; text-align: center;">
 			<p style="margin: 0; font-weight: 600; color: var(--accent-warning);">⚠️ Interview In Progress</p>
 			<p style="margin: 0; color: var(--text-secondary);">An interview is currently happening. You must complete or

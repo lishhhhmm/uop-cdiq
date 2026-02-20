@@ -164,6 +164,36 @@ class SecretaryEnqueueDequeue extends UpdateRequest
 	}
 
 }
+
+class CompanyNoShowCandidate extends UpdateRequest
+{
+
+	private readonly int $iwer_id;
+	private readonly int $iwee_id;
+
+	public function __construct(int $update_id_known, int $iwer_id, int $iwee_id)
+	{
+		parent::__construct($update_id_known);
+
+		$this->iwer_id = $iwer_id;
+		$this->iwee_id = $iwee_id;
+	}
+
+	protected function process(PDO $pdo): void
+	{
+		$statement = $pdo->query("DELETE
+			FROM interview
+			WHERE id_interviewer = {$this->iwer_id}
+			AND id_interviewee = {$this->iwee_id}
+			AND state_ IN ('CALLING', 'DECISION')
+		;");
+
+		if ($statement === false) {
+			throw new Exception("failed to execute query");
+		}
+	}
+
+}
 ;
 
 class SecretaryActiveInactiveFlipInterviewee extends UpdateRequest
@@ -416,14 +446,16 @@ class SystemCallingToDecision extends UpdateRequest
 				CURRENT_TIMESTAMP - state_timestamp > INTERVAL '{$this->after_seconds} seconds';
 		");
 
-		if ($statement->rowCount() === 0) {
-			throw new Exception("none moved to decision");
-		}
-
 		if ($statement === false) {
 			throw new Exception("failed to execute query");
 		}
+
+		if ($statement->rowCount() > 0) {
+			$this->changes_happened = true;
+		}
 	}
+
+	public bool $changes_happened = false;
 
 }
 ;
@@ -601,11 +633,10 @@ class GatekeeperHappeningToCompletedAndPause extends UpdateRequest
 			throw new Exception("failed to execute completion query (interview not found or not happening)");
 		}
 
-		// 2. Pause the interviewer (set both active and available to false)
+		// 2. Pause the interviewer (set active to false; available is recalculated by the routine)
 		$statement = $pdo->query("UPDATE interviewer
 			SET
-				active = false,
-				available = false
+				active = false
 			WHERE
 				id = {$this->interviewer_id}
 				;
@@ -613,6 +644,36 @@ class GatekeeperHappeningToCompletedAndPause extends UpdateRequest
 
 		if ($statement === false || $statement->rowCount() === 0) {
 			throw new Exception("failed to execute pause query (interviewer not found)");
+		}
+	}
+
+}
+;
+
+;
+
+class SecretaryGenerateInterviewerToken extends UpdateRequest
+{
+
+	private readonly int $interviewer_id;
+	private readonly string $token;
+
+	public function __construct(int $update_id_known, int $interviewer_id, string $token)
+	{
+		parent::__construct($update_id_known);
+
+		$this->interviewer_id = $interviewer_id;
+		$this->token = $token;
+	}
+
+	protected function process(PDO $pdo): void
+	{
+		$statement = $pdo->prepare("UPDATE interviewer SET token = :token, token_expires_at = CURRENT_TIMESTAMP + INTERVAL '10 minutes' WHERE id = :id");
+		$statement->bindValue(':token', $this->token);
+		$statement->bindValue(':id', $this->interviewer_id, PDO::PARAM_INT);
+
+		if ($statement->execute() === false) {
+			throw new Exception("failed to generate token");
 		}
 	}
 
@@ -629,6 +690,10 @@ interface Database
 	public function operator_mapping(string $password, string &$timestamp): string|false;
 
 	public function operator_still_alive(string $timestamp): bool;
+
+	public function company_mapping(string $token): int|false;
+
+	public function company_still_alive(int $interviewer_id): bool;
 
 	/**
 	 * @return true on success
@@ -754,6 +819,27 @@ class Postgres implements Database, DatabaseAdmin, DatabaseJobPositions
 		});
 	}
 
+	public function company_mapping(string $token): int|false
+	{
+		return $this->connect(true, function () use ($token) {
+			$statement = $this->pdo->prepare("SELECT id FROM interviewer WHERE token = :token AND token_expires_at > CURRENT_TIMESTAMP");
+			$statement->bindParam(':token', $token);
+			$statement->execute();
+			$res = $statement->fetch();
+			return $res ? $res['id'] : false;
+		});
+	}
+
+	public function company_still_alive(int $interviewer_id): bool
+	{
+		return $this->connect(true, function () use ($interviewer_id) {
+			$statement = $this->pdo->prepare("SELECT 1 FROM interviewer WHERE id = :id AND token_expires_at > CURRENT_TIMESTAMP");
+			$statement->bindParam(':id', $interviewer_id, PDO::PARAM_INT);
+			$statement->execute();
+			return (bool) $statement->fetch();
+		});
+	}
+
 	public function update_handle(UpdateRequest $update_request): true|string
 	{
 		return $this->connect(
@@ -784,7 +870,9 @@ class Postgres implements Database, DatabaseAdmin, DatabaseJobPositions
 					$updated_or_reason = $update_request->dispatch($this->pdo);
 
 					if ($updated_or_reason === true) {
-						$this->update_handled_routine();
+						$this->update_handled_routine(
+							($update_request instanceof SystemCallingToDecision) ? $update_request->changes_happened : true
+						);
 					} else {
 						throw new UpdateHandleExpectedException($updated_or_reason);
 					}
@@ -813,12 +901,13 @@ class Postgres implements Database, DatabaseAdmin, DatabaseJobPositions
 		);
 	}
 
-	private function update_handled_routine()
+	private function update_handled_routine(bool $forced_update = false)
 	{
+		$changes_happened = $forced_update;
 
 		# TODO (haha) can be more efficient if we do only the needed avaialability fixes after each update request, more complex since the logic is spread out then
 
-		$this->pdo->query("UPDATE interviewee
+		$statement = $this->pdo->query("UPDATE interviewee
 			SET available = (
 				(
 					NOT EXISTS (
@@ -831,9 +920,23 @@ class Postgres implements Database, DatabaseAdmin, DatabaseJobPositions
 				AND
 				interviewee.active
 			)
+			WHERE available != (
+				(
+					NOT EXISTS (
+						SELECT id FROM interview
+						WHERE interview.id_interviewee = interviewee.id
+						AND state_ NOT IN ('ENQUEUED', 'COMPLETED')
+						LIMIT 1
+					)
+				)
+				AND
+				interviewee.active
+			)
 		;");
+		if ($statement && $statement->rowCount() > 0)
+			$changes_happened = true;
 
-		$this->pdo->query("UPDATE interviewer
+		$statement = $this->pdo->query("UPDATE interviewer
 			SET available = (
 				(
 					NOT EXISTS (
@@ -846,7 +949,21 @@ class Postgres implements Database, DatabaseAdmin, DatabaseJobPositions
 				AND
 				interviewer.active
 			)
+			WHERE available != (
+				(
+					NOT EXISTS (
+						SELECT id FROM interview
+						WHERE interview.id_interviewer = interviewer.id
+						AND state_ NOT IN ('ENQUEUED', 'COMPLETED')
+						LIMIT 1
+					)
+				)
+				AND
+				interviewer.active
+			)
 		;");
+		if ($statement && $statement->rowCount() > 0)
+			$changes_happened = true;
 
 		# ---
 		# ENQUEUED interviews to CALLING with respect order via ID
@@ -869,6 +986,7 @@ class Postgres implements Database, DatabaseAdmin, DatabaseJobPositions
 		";
 
 		do {
+			$loop_change = false;
 			$statement = $this->pdo->query($query_next_interview_to_calling);
 
 			if ($statement === false) {
@@ -905,17 +1023,19 @@ class Postgres implements Database, DatabaseAdmin, DatabaseJobPositions
 				) {
 					throw new Exception("failed to execute query");
 				}
-
+				$changes_happened = true;
+				$loop_change = true;
 			}
 
-		} while ($statement->rowCount() === 1);
+		} while ($loop_change);
 
 		# ---
 
-		if ($this->pdo->query("INSERT INTO updates (happened) VALUES (CURRENT_TIMESTAMP);") === false) {
-			throw new UpdateHandleUnexpectedException("unable to insert update timestamp");
+		if ($changes_happened) {
+			if ($this->pdo->query("INSERT INTO updates (happened) VALUES (CURRENT_TIMESTAMP);") === false) {
+				throw new UpdateHandleUnexpectedException("unable to insert update timestamp");
+			}
 		}
-		# TODO recreate it with triggers in the database when one of the tables is affected?
 	}
 
 	public function update_happened_recent(): int
@@ -1177,7 +1297,9 @@ class Postgres implements Database, DatabaseAdmin, DatabaseJobPositions
 						image_resource_url,
 						table_number,
 						active,
-						available
+						available,
+						token,
+						token_expires_at
 					FROM interviewer
 					ORDER BY name;
 				",
@@ -1185,7 +1307,9 @@ class Postgres implements Database, DatabaseAdmin, DatabaseJobPositions
 				"CREATE VIEW view_gatekeeper_iwees AS
 					SELECT
 						id,
-						email
+						email,
+						active,
+						available
 					FROM interviewee
 					ORDER BY id;
 				",
@@ -1203,13 +1327,15 @@ class Postgres implements Database, DatabaseAdmin, DatabaseJobPositions
 						name,
 						image_resource_url,
 						table_number,
-						active
+						active,
+						token,
+						token_expires_at
 					FROM interviewer
 					ORDER BY name;
 				",
 
 				"CREATE VIEW view_queues_iwees AS
-					SELECT id, available FROM interviewee;
+					SELECT id, available, active FROM interviewee;
 				",
 
 				"CREATE VIEW view_queues_iws AS

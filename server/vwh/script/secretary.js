@@ -19,6 +19,8 @@ const iwer_button_add = document.getElementById('iwer_button_add');
 const iwer_info_dialog = document.getElementById('iwer_info_dialog');
 const iwer_info_dialog_delete = document.getElementById('iwer_info_dialog_delete');
 const iwer_info_dialog_id = document.getElementById('iwer_info_dialog_id');
+const iwer_info_dialog_token = document.getElementById('iwer_info_dialog_token');
+const iwer_info_dialog_generate_token = document.getElementById('iwer_info_dialog_generate_token');
 
 // TODO maybe validate that all elements needed exist? then move all document.get... up here
 
@@ -179,7 +181,7 @@ iwee_select.addEventListener('change', function () {
 });
 
 iwer_button_add.addEventListener('click', function () {
-	display(false, [iwer_info_dialog_delete]);
+	display(false, [iwer_info_dialog_delete, iwer_info_dialog_generate_token.parentElement.parentElement]);
 
 	if (iwer_info_dialog_id.value === 'null') {
 		document.getElementById('iwer_info_dialog_name').value = iwer_filter.value.trim();
@@ -254,21 +256,27 @@ iwer_form.addEventListener("submit", function (event) {
 	let button_delete = document.getElementById('iwer_info_dialog_delete');
 
 	confirm_message = (() => {
-		if (button === button_confirm && iwer_info_dialog_id.value === 'null') {
-			return '// TODO confirmation message of what ADDING';
-		}
-		if (button === button_confirm /* && iwer_info_dialog_id.value !== 'null' */) {
-			return '// TODO confirmation message of what EDITING';
+		if (button === button_confirm) {
+			if (iwer_info_dialog_id.value === 'null') {
+				return '// TODO confirmation message of what ADDING';
+			} else {
+				return '// TODO confirmation message of what EDITING';
+			}
 		}
 		else if (button === button_delete) {
 			return '// TODO confirmation message of what DELETING';
+		}
+		else if (button === iwer_info_dialog_generate_token) {
+			return 'generating a new ACCESS TOKEN (10 minutes)';
 		}
 		return null;
 	})();
 
 	submiting(iwer_form, confirm_message, () => {
-		iwer_info_dialog.close();
-		iwer_form.reset();
+		if (button !== iwer_info_dialog_generate_token) {
+			iwer_info_dialog.close();
+			iwer_form.reset();
+		}
 	}, event);
 });
 
@@ -365,10 +373,11 @@ function update(data) {
 					iwer_info_dialog_id.value = interviewer['id'];
 					document.getElementById('iwer_info_dialog_name').value = interviewer['name'];
 					document.getElementById('iwer_info_dialog_table').value = interviewer['table'];
+					iwer_info_dialog_token.value = interviewer['token'] || '';
 
 					iwer_button_add.dispatchEvent(new Event("click"));
 
-					display(true, [iwer_info_dialog_delete]);
+					display(true, [iwer_info_dialog_delete, iwer_info_dialog_generate_token.parentElement.parentElement]);
 				}
 			});
 			display(iwee_option_empty.selected === false, [interviewer['element_input']]);
@@ -387,6 +396,12 @@ function update(data) {
 		interviewer['image'] = iwer_row['image_resource_url'];
 		interviewer['active'] = iwer_row['active'];
 		interviewer['available'] = iwer_row['available'];
+		interviewer['token'] = iwer_row['token'];
+		interviewer['token_expires_at'] = iwer_row['token_expires_at'];
+
+		if (iwer_info_dialog.open && iwer_info_dialog_id.value == interviewer['id']) {
+			iwer_info_dialog_token.value = interviewer['token'] || '';
+		}
 
 		interviewer['element_img'].src = interviewer['image'];
 		interviewer['element_p'].style.lineHeight = '1.5rem';

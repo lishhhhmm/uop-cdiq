@@ -1,5 +1,7 @@
 <?php header("Content-type: text/css"); ?>
 
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+
 /* Notes:
 Theme inspired by "4n Career Day" poster colors
 Light theme implementation
@@ -29,27 +31,40 @@ margin: 0;
 /* --- Layout --- */
 
 html {
+margin: 0;
+padding: 0;
+overflow-x: hidden;
 word-break: break-word;
-background: var(--bg-primary);
-background-image:
-radial-gradient(circle at 0% 0%, rgba(161, 32, 36, 0.03) 0%, transparent 50%),
-radial-gradient(circle at 100% 100%, rgba(140, 198, 63, 0.03) 0%, transparent 50%);
+background: var(--bg-primary); /* Base color */
 min-height: 100vh;
 }
 
 body {
+margin: 0;
+padding: 1.5rem;
 display: flex;
 flex-direction: column;
 align-items: center;
-
-height: auto;
 min-height: 100dvh;
 width: 100%;
-
-padding: 1.5rem;
-
 color: var(--text-primary);
 line-height: 1.6;
+}
+
+/* Background Pattern Overlay - Matches Static Site .site-bg */
+body.bg-pattern::after {
+content: "";
+position: fixed;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+z-index: -1;
+background-image: url('/resources/images/background.svg');
+background-size: cover;
+background-position: center;
+opacity: 0.04; /* Opaque as requested */
+pointer-events: none;
 }
 
 hr {
@@ -322,7 +337,15 @@ color: var(--text-primary);
 dialog::backdrop {
 background-color: rgba(0, 0, 0, 0.7);
 backdrop-filter: blur(8px);
+-webkit-backdrop-filter: blur(8px);
 cursor: pointer;
+position: fixed;
+inset: 0;
+width: 100%;
+height: 100%;
+margin: 0;
+padding: 0;
+border: none;
 }
 
 dialog p {
@@ -829,10 +852,279 @@ max-width: 320px;
 }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 800px) { /* Increased breakpoint for hamburger */
 dialog[open], .dialog_details[open] {
 width: 95vw;
 max-width: 95vw;
 padding: 1rem;
+}
+}
+
+
+/* --- New Header Styles (Ported) --- */
+
+:root {
+--bg-page: #f8fafc;
+/* --bg-card: rgba(255, 255, 255, 0.8); */ /* Using existing --bg-card */
+--accent-red: #9E1B32;
+--accent-orange: #F7911E;
+--accent-teal: #005C84;
+--accent-green: #00AD6E;
+/* --text-primary: #0f172a; */ /* Using existing */
+/* --text-secondary: #475569; */ /* Using existing */
+--border-glass: rgba(0, 0, 0, 0.1);
+--font-heading: 'Outfit', sans-serif; /* Override for header components */
+--transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+--shadow-soft: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+}
+
+/* Adjust main content padding because header is fixed */
+body {
+padding-top: 120px !important; /* Override existing padding */
+}
+
+.glass-nav {
+position: fixed;
+top: 1.25rem;
+left: 50%;
+transform: translateX(-50%);
+width: calc(100% - 2.5rem);
+max-width: 1300px;
+background: rgba(255, 255, 255, 0.85); /* Matches static */
+backdrop-filter: blur(12px);
+border: 1px solid var(--border-glass);
+border-radius: 3rem;
+z-index: 1000;
+padding: 0.75rem 1.5rem;
+box-shadow: var(--shadow-soft);
+font-family: 'Outfit', sans-serif !important; /* Force font */
+
+/* RESET GENERIC NAV STYLES */
+display: block !important; /* Override flex */
+justify-content: unset !important;
+gap: unset !important;
+}
+
+.glass-nav * {
+font-family: 'Outfit', sans-serif !important;
+box-sizing: border-box;
+}
+
+/* Reset generic nav link styles for ALL links inside glass-nav */
+.glass-nav a {
+padding: 0 !important;
+border-radius: 0 !important;
+background-color: transparent !important;
+color: inherit;
+font-weight: normal;
+border: none !important;
+transition: none;
+display: inline-flex; /* Reset display */
+}
+
+.glass-nav a:hover {
+background: transparent !important;
+color: inherit !important;
+}
+
+.nav-content {
+display: flex;
+flex-direction: row;
+gap: 1.5rem;
+justify-content: center; /* Changed to center to support inner width */
+align-items: center;
+}
+
+.nav-main-row {
+display: flex;
+justify-content: space-between;
+align-items: center;
+width: 100%;
+}
+
+.header-logos {
+display: flex;
+align-items: center;
+gap: 1.5rem;
+}
+
+.header-logos h2 {
+font-family: 'Outfit', sans-serif;
+font-size: 1.2rem;
+font-weight: 700;
+margin: 0;
+margin-right: 0.5rem;
+white-space: nowrap;
+letter-spacing: -0.5px;
+color: var(--text-primary);
+cursor: default;
+}
+
+.header-logos a {
+display: flex;
+align-items: center;
+}
+
+.logo-link {
+text-decoration: none;
+color: inherit;
+transition: none; /* Disable transition */
+}
+
+.logo-link:hover {
+opacity: 1 !important; /* Force no opacity change */
+color: inherit !important; /* Force no color change */
+}
+
+.nav-logo {
+height: 35px;
+width: auto;
+transition: none; /* Disable transition */
+}
+
+.nav-logo:hover {
+transform: none !important; /* Force no scale */
+filter: none !important;
+}
+
+.nav-links {
+display: flex;
+gap: 2rem;
+align-items: center;
+}
+
+/* Specific styles for nav links to restore desired look */
+.nav-links a {
+color: var(--text-secondary) !important; /* Re-apply color */
+text-decoration: none;
+font-weight: 500 !important;
+transition: var(--transition) !important;
+padding: 0.5rem 1rem !important; /* Re-apply padding */
+border-radius: 20px !important;
+background-color: transparent !important; /* Explicit override */
+border: none !important; /* Explicit override */
+display: inline-block !important;
+}
+
+.nav-links a:hover,
+.nav-links a.active {
+background: rgba(0, 0, 0, 0.05) !important;
+box-shadow: none;
+transform: none;
+border-color: transparent;
+color: var(--text-secondary) !important; /* Keep original color */
+}
+
+.btn-hub {
+border: 1.5px solid var(--accent-teal) !important;
+border-radius: 25px !important;
+padding: 0.4rem 1.2rem !important;
+color: var(--accent-teal) !important;
+font-weight: 600 !important;
+transition: var(--transition);
+background: transparent !important;
+}
+
+.btn-hub:hover {
+background: var(--accent-teal) !important;
+color: white !important;
+}
+
+.cta-nav {
+background: linear-gradient(135deg, var(--accent-red), var(--accent-orange)) !important;
+padding: 0.6rem 1.5rem !important;
+border-radius: 25px !important;
+color: white !important;
+box-shadow: 0 4px 15px rgba(204, 43, 46, 0.4);
+font-weight: 600 !important;
+border: none !important;
+}
+
+.gradient-text {
+background: linear-gradient(to right, var(--accent-red), var(--accent-orange));
+-webkit-background-clip: text;
+background-clip: text;
+-webkit-text-fill-color: transparent;
+}
+
+.animate-fade-in {
+animation: fadeIn 0.8s ease-out forwards;
+}
+
+@keyframes fadeIn {
+from { opacity: 0; transform: translateY(10px); }
+to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Hamburger Button --- */
+.hamburger {
+display: none;
+flex-direction: column;
+justify-content: center;
+gap: 6px;
+background: none;
+border: none;
+cursor: pointer;
+padding: 4px;
+z-index: 1001;
+width: 40px;
+height: 40px;
+box-shadow: none !important; /* Override default button shadow */
+}
+
+.hamburger span {
+display: block;
+width: 28px;
+height: 3px;
+background: var(--text-primary);
+border-radius: 2px;
+transition: var(--transition);
+}
+
+.hamburger.active span:nth-child(1) {
+transform: rotate(45deg) translate(7px, 7px);
+}
+
+.hamburger.active span:nth-child(2) {
+opacity: 0;
+}
+
+.hamburger.active span:nth-child(3) {
+transform: rotate(-45deg) translate(7px, -7px);
+}
+
+/* --- Responsive --- */
+@media (max-width: 800px) {
+.hamburger {
+display: flex;
+}
+
+.nav-links {
+position: fixed;
+top: 70px; /* Below glass nav */
+left: 0;
+right: 0;
+background: rgba(255, 255, 255, 0.95);
+backdrop-filter: blur(15px);
+flex-direction: column;
+padding: 1.5rem;
+gap: 1rem;
+transform: translateY(-150%);
+transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+border-bottom: 1px solid var(--border-glass);
+box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+width: 100%;
+}
+
+.nav-links.open {
+transform: translateY(0);
+}
+
+.header-logos h2 {
+font-size: 1rem;
+}
+
+.nav-logo {
+height: 28px;
 }
 }

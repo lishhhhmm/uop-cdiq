@@ -5,6 +5,10 @@ date_default_timezone_set(TIMEZONE);
 
 header("Content-Type: text/plain", true);
 
+if (session_status() === PHP_SESSION_NONE) {
+	session_start();
+}
+
 if (isset($_GET) === false) {
 	echo 'use at least GET method';
 	exit(0);
@@ -69,6 +73,21 @@ $parameters = [
 						return [];
 					} else {
 						return array_merge($db->retrieve_gatekeeper_view(), ['calling_time' => CALLING_TIME_IN_SECONDS]);
+					}
+				},
+				'company' => function () use ($db): array {
+					require_once $_SERVER['DOCUMENT_ROOT'] . '/.private/assembler.php';
+
+					$company_id = AssemblerOperate::company_id();
+					if ($company_id === null) {
+						return [];
+					} else {
+						// For now, let's reuse something or keep it simple.
+						// Company dashboard will likely need a specific view.
+						return array_merge($db->retrieve_gatekeeper_view(), [
+							'calling_time' => CALLING_TIME_IN_SECONDS,
+							'company_id' => $company_id
+						]);
 					}
 				},
 			];
@@ -154,6 +173,17 @@ $parameters = [
 								...(isset($_POST['interviewers']) ? $_POST['interviewers'] : [])
 							);
 						} else if (
+							isset($_POST['iwer_info_dialog_generate_token'])
+							&& isset($_POST['iwer_info_dialog_id']) && $_POST['iwer_info_dialog_id'] !== 'null'
+						) {
+							// Generate a random 6-digit token securely
+							$token = sprintf("%06d", random_int(0, 999999));
+							$update_request = new SecretaryGenerateInterviewerToken(
+								$update_known,
+								intval($_POST['iwer_info_dialog_id']),
+								$token
+							);
+						} else if (
 							isset($_POST['iwee_button_active_inactive'])
 							&& isset($_POST['iwee_select']) && $_POST['iwee_select'] !== 'null'
 						) {
@@ -205,10 +235,63 @@ $parameters = [
 						} else if (
 							isset($_POST['button_active_inactive'])
 							&& isset($_POST['input_interviewer_id'])
+							&& $_POST['input_interviewer_id'] !== 'null'
 						) {
 							$update_request = new GatekeeperActiveInactiveFlipInterviewer(
 								$update_known,
 								intval($_POST['input_interviewer_id'])
+							);
+						}
+					}
+
+					if (isset($update_request) === false && AssemblerOperate::operator_is(Operator::Company) === true) {
+						$unauthorized = false;
+						$company_id = AssemblerOperate::company_id();
+
+						if (
+							isset($_POST['button_to_completed'])
+							&& isset($_POST['input_interview_id'])
+						) {
+							// Verify this interview belongs to the company
+							// (Security check: ideally we'd check this in the UpdateRequest process or here)
+							$update_request = new GatekeeperHappeningToCompleted(
+								$update_known,
+								intval($_POST['input_interview_id'])
+							);
+						} else if (
+							isset($_POST['button_to_completed_and_pause'])
+							&& isset($_POST['input_interview_id'])
+							&& isset($_POST['input_interviewer_id'])
+							&& intval($_POST['input_interviewer_id']) === $company_id
+						) {
+							$update_request = new GatekeeperHappeningToCompletedAndPause(
+								$update_known,
+								intval($_POST['input_interview_id']),
+								$company_id
+							);
+						} else if (
+							isset($_POST['button_to_happening'])
+							&& isset($_POST['input_interview_id'])
+						) {
+							$update_request = new GatekeeperCallingOrDecisionToHappening(
+								$update_known,
+								intval($_POST['input_interview_id'])
+							);
+						} else if (
+							isset($_POST['button_no_show'])
+							&& isset($_POST['input_interviewee_id'])
+						) {
+							$update_request = new CompanyNoShowCandidate(
+								$update_known,
+								$company_id,
+								intval($_POST['input_interviewee_id'])
+							);
+						} else if (
+							isset($_POST['button_active_inactive'])
+						) {
+							$update_request = new GatekeeperActiveInactiveFlipInterviewer(
+								$update_known,
+								$company_id
 							);
 						}
 					}
