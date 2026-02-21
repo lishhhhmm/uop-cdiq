@@ -355,7 +355,7 @@ class ElementInterviewer extends Observer {
 				if (iw.getState() === 'DECISION') {
 					this.#status_indicator.classList.add('status_indicator--decision');
 					this.#status_information.innerHTML =
-						'Decision for Interviewee ' +
+						'Decision for Candidate ' +
 						iw.getInterviewee().getId()
 						;
 				}
@@ -374,7 +374,7 @@ class ElementInterviewer extends Observer {
 
 								this.#status_indicator.classList.add('status_indicator--calling');
 								this.#status_information.innerHTML =
-									'Calling Interviewee <span class="called-number">' +
+									'Calling Candidate <span class="called-number">' +
 									iw.getInterviewee().getId() + '</span>' +
 									'<br>Remaining: <span>' +
 									remaining +
@@ -392,7 +392,7 @@ class ElementInterviewer extends Observer {
 
 								this.#status_indicator.classList.add('status_indicator--happening');
 								this.#status_information.innerHTML =
-									'Happening with Interviewee <span class="called-number">' +
+									'Happening with Candidate <span class="called-number">' +
 									iw.getInterviewee().getId() + '</span>' +
 									'<br>Elapsed: <span>' +
 									elapsed +
@@ -401,7 +401,7 @@ class ElementInterviewer extends Observer {
 							case 'DECISION':
 								this.#status_indicator.classList.add('status_indicator--decision');
 								this.#status_information.innerHTML =
-									'Decision for Interviewee <span class="called-number">' +
+									'Decision for Candidate <span class="called-number">' +
 									iw.getInterviewee().getId() + '</span>';
 								break;
 
@@ -582,8 +582,14 @@ class ElementDialogInterviewer extends Observer {
 				return element;
 			}
 
-			this.#element_interviews.replaceChildren(...iwer.getInterviews().map(iw => make_element(iw)));
-			this.#element_interviews_count.innerHTML = '( ' + iwer.getInterviews().length + ' )';
+			// Exclude HAPPENING — they're in the interview room, not in the queue.
+			// CALLING and DECISION stay visible: the candidate is still waiting / being called.
+			const isHappening = iw_c && iw_c.getState() === 'HAPPENING';
+			const waitingInterviews = isHappening
+				? iwer.getInterviews().filter(iw => iw !== iw_c)
+				: iwer.getInterviews();
+			this.#element_interviews.replaceChildren(...waitingInterviews.map(iw => make_element(iw)));
+			this.#element_interviews_count.innerHTML = '( ' + waitingInterviews.length + ' )';
 
 			// ---
 

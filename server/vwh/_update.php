@@ -82,9 +82,7 @@ $parameters = [
 					if ($company_id === null) {
 						return [];
 					} else {
-						// For now, let's reuse something or keep it simple.
-						// Company dashboard will likely need a specific view.
-						return array_merge($db->retrieve_gatekeeper_view(), [
+						return array_merge($db->retrieve_company_view(), [
 							'calling_time' => CALLING_TIME_IN_SECONDS,
 							'company_id' => $company_id
 						]);

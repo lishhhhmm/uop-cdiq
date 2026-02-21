@@ -21,6 +21,7 @@ $a->body_main = function () { ?>
                 </div>
             </div>
         </div>
+        <a href="/company_logout.php" class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; border: 1px solid var(--border-subtle); background: var(--surface-primary); color: var(--brand-maroon); font-weight: 600; text-decoration: none; border-radius: 6px;">Sign Out</a>
     </div>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
@@ -38,7 +39,7 @@ $a->body_main = function () { ?>
 
     <div id="current-interview"
         style="display: none; margin-bottom: 2rem; padding: 1.5rem; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-subtle);">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
             <div>
                 <p id="interviewee-email" style="margin: 0; font-weight: 600; color: var(--text-primary);"></p>
                 <p id="interviewee-number"
@@ -47,6 +48,28 @@ $a->body_main = function () { ?>
             <div id="interview-state-badge"
                 style="padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.875rem; font-weight: 600;"></div>
         </div>
+
+        <!-- ── Candidate profile (populated by JS when data available) ── -->
+        <div id="candidate-profile-info"
+            style="display:none; margin-bottom: 1.25rem; padding: 1rem; background: var(--surface-secondary); border-radius: 8px; border: 1px solid var(--border-subtle);">
+            <div style="display:flex; align-items:center; gap: 1rem; flex-wrap:wrap;">
+                <img id="cand-avatar" src="" alt=""
+                    style="width:52px;height:52px;border-radius:50%;object-fit:cover;background:var(--surface-primary); display:none;">
+                <div style="flex:1; min-width:0;">
+                    <p id="cand-fullname" style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-primary);">
+                    </p>
+                    <div id="cand-chips" style="display:flex; gap:0.4rem; flex-wrap:wrap; margin-top:0.35rem;"></div>
+                </div>
+                <a id="cand-cv-link" href="#" target="_blank" rel="noopener"
+                    style="display:none; padding:0.35rem 0.85rem; border-radius:6px; background:var(--brand-maroon,#7b1a1a); color:#fff; font-size:0.8rem; font-weight:600; text-decoration:none; flex-shrink:0;">
+                    📄 CV
+                </a>
+            </div>
+            <p id="cand-interests"
+                style="display:none; margin: 0.6rem 0 0; font-size:0.82rem; color:var(--text-secondary); line-height:1.4;">
+            </p>
+        </div>
+
         <div id="interview-timer-container" style="margin-bottom: 1.5rem; text-align: center; display: none;">
             <div id="interview-timer"
                 style="font-size: 2.5rem; font-weight: 800; font-family: monospace; color: var(--brand-green, #4CAF50);">
@@ -54,11 +77,6 @@ $a->body_main = function () { ?>
             <p
                 style="margin: 0.25rem 0 0; font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">
                 Interview Time (Suggestive)</p>
-        </div>
-        <div style="display: flex; gap: 0.75rem;">
-            <button id="btn-arrived" class="btn-primary" style="flex: 1; display: none;">Arrived</button>
-            <button id="btn-complete" class="btn-primary" style="flex: 1; display: none;">Completed</button>
-            <button id="btn-no-show" class="btn-secondary" style="flex: 1; display: none;">Didn't Show Up</button>
         </div>
     </div>
 
@@ -175,6 +193,20 @@ $a->body_main = function () { ?>
             <button onclick="this.closest('dialog').close();" class="btn-primary" style="padding: 0.75rem 3rem;">Ready to
                 Start</button>
         </div>
+    </dialog>
+
+    <!-- CV Preview Modal -->
+    <dialog id="dialog_cv_preview" onclick="if(event.target===this)this.close();"
+        style="width: 90vw; max-width: 1000px; height: 90vh; border: none; border-radius: 12px; padding: 0; box-shadow: 0 10px 50px rgba(0,0,0,0.4); overflow: hidden; background: #525659;">
+        <div style="background: white; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle);">
+            <h3 style="margin: 0; font-size: 1.2rem; color: var(--brand-maroon);" id="cv_preview_title">Candidate CV</h3>
+            <div style="display: flex; gap: 0.75rem;">
+                <a id="btn_cv_external" href="#" target="_blank" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; text-decoration: none;">Open External ↗</a>
+                <button onclick="document.getElementById('dialog_cv_preview').close();"
+                    style="background: #eee; border: none; font-size: 1.5rem; color: #666; cursor: pointer; line-height: 1; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">×</button>
+            </div>
+        </div>
+        <iframe id="cv_iframe" src="" style="width: 100%; height: calc(100% - 60px); border: none;"></iframe>
     </dialog>
 
     <script src="/script/utilities.js"></script>

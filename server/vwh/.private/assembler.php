@@ -13,6 +13,7 @@ class Assembler
 	public string $head_title;
 	public Stylesheet $head_stylesheet;
 	public string $body_main_id;
+	public ?string $body_header_title_override = null;
 	public Closure $body_main;
 	public ?array $custom_nav = null;
 
@@ -27,7 +28,9 @@ class Assembler
 		$this->body_main = function () { ?>
 			<p>This page has no content yet.</p><?php };
 
-		session_start();
+		if (session_status() === PHP_SESSION_NONE) {
+			session_start();
+		}
 	}
 
 	public function assemble(): void
@@ -96,11 +99,15 @@ class Assembler
 			</div>
 		</nav>
 
-		<div style="text-align: center; margin-top: 2rem; margin-bottom: 2rem;">
-			<h1 class="text-primary"><?= $this->body_header_title ?></h1>
-		</div>
+		<?php
+		$_title = $this->body_header_title_override ?? $this->body_header_title;
+		if ($_title !== ''): ?>
+			<div style="text-align: center; margin-top: 2rem; margin-bottom: 2rem;">
+				<h1 class="text-primary"><?= $_title ?></h1>
+			</div>
 
-		<hr>
+			<hr>
+		<?php endif; ?>
 
 		<main id="<?= $this->body_main_id ?>">
 			<?php ($this->body_main)(); ?>
@@ -116,6 +123,24 @@ class Assembler
 					Hub</strong>
 			</p>
 		</footer>
+
+		<script>
+			// UserWay Accessibility Widget Configuration
+			(function () {
+				window._userway_config = {
+					position: '5', // Standard Bottom Left
+					color: '#F7911E', // Career Fair Orange
+					language: 'en',
+					mobile: true,
+					account: 'L5D5s7Yq3N' // Official UoP Account ID
+				};
+
+				var s = document.createElement("script");
+				s.setAttribute("src", "https://cdn.userway.org/widget.js");
+				s.setAttribute("data-account", "L5D5s7Yq3N");
+				document.body.appendChild(s);
+			})();
+		</script>
 
 		<?php
 	}
@@ -134,6 +159,16 @@ class Assembler
 		<a href="https://careerday.fet.uop.gr/companies.php">Companies</a>
 		<a href="/suggestions.php">Suggestions</a>
 		<?php
+		// Show candidate nav link dynamically
+		require_once $_SERVER['DOCUMENT_ROOT'] . '/.private/candidate_auth.php';
+		$_cand = candidate_session_get();
+		if ($_cand !== false): ?>
+			<a href="/candidate_dashboard.php" class="cta-nav">My Queues</a>
+		<?php else: ?>
+			<a href="/candidate_register.php" class="cta-nav">Register</a>
+		<?php endif;
+	?>
+	<?php
 	}
 
 }
@@ -222,6 +257,12 @@ class AssemblerOperate extends Assembler
 		}
 
 		$_SESSION[AssemblerOperate::$SESSION_OPERATOR_ARRAY][Operator::Company->value] = $company_id;
+
+		// Make session persistent for 30 days
+		if (isset($_COOKIE[session_name()])) {
+			setcookie(session_name(), $_COOKIE[session_name()], time() + (86400 * 30), "/", "", true, true);
+		}
+
 		header("Location: /company_dashboard.php");
 		exit;
 	}

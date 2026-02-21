@@ -710,8 +710,26 @@ interface Database
 
 	public function retrieve_gatekeeper_view(): array;
 
+	public function retrieve_company_view(): array;
+
 	public function retrieve_queues_view(): array;
 	public function retrieve_companies_view(): array;
+
+	/**
+	 * Lookup a candidate by google_sub. Returns the interviewee row or false.
+	 */
+	public function candidate_by_google_sub(string $google_sub): array|false;
+
+	/**
+	 * Lookup a candidate by email. Returns the interviewee row or false.
+	 */
+	public function candidate_by_email(string $email): array|false;
+
+	/**
+	 * Retrieves all interviewers (companies) and the candidate's current queue entries.
+	 * Returns ['interviewers' => [...], 'interviews' => [...], 'update' => int]
+	 */
+	public function candidate_dashboard_view(int $interviewee_id): array;
 }
 
 interface DatabaseAdmin
@@ -743,6 +761,284 @@ class UpdateHandleExpectedException extends Exception
 class UpdateHandleUnexpectedException extends Exception
 {
 }
+
+/**
+ * Self-registration by a candidate (student).
+ * 
+ * This goes through update_handle() like all writes, so it acquires
+ * EXCLUSIVE LOCK on interview and respects update_id_known — meaning
+ * concurrent Secretary or Student operations cannot conflict.
+ * 
+ * Atomically:
+ *   1. Upserts the interviewee record (email + profile fields)
+ *   2. Enrolls in selected companies (same logic as SecretaryEnqueueDequeue)
+ *   3. Removes old ENQUEUED entries not in the new list
+ * 
+ * If the DB insert fails after CV file was uploaded,
+ * when_dispatch_fails() cleans up the file.
+ */
+class CandidateSelfRegister extends UpdateRequest
+{
+
+	private static string $cv_base = '/resources/cv/';
+
+	private readonly string $email;
+	private readonly string $google_sub;
+	private readonly string $display_name;
+	private readonly string $avatar_url;
+	private readonly string $department;
+	private readonly string $masters;
+	private readonly string $interests; // comma-separated
+	private readonly ?string $cv_resource_url;
+	private readonly array $interviewer_ids; // companies to enqueue
+
+	public function __construct(
+		int $update_id_known,
+		string $email,
+		string $google_sub,
+		string $display_name,
+		string $avatar_url,
+		string $department,
+		string $masters,
+		string $interests,
+		?array $cv_file,
+		array $interviewer_ids,
+	) {
+		parent::__construct($update_id_known);
+
+		$email = filter_var(trim($email), FILTER_SANITIZE_EMAIL);
+		if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+			throw new InvalidArgumentException('invalid email address');
+		}
+		$this->email = $email;
+		$this->google_sub = trim($google_sub);
+		$this->display_name = trim($display_name);
+		$this->avatar_url = trim($avatar_url);
+		$this->department = trim($department);
+		$this->masters = trim($masters);
+		$this->interests = trim($interests);
+		$this->interviewer_ids = array_map('intval', $interviewer_ids);
+
+		if ($cv_file !== null && ($cv_file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
+			if ($cv_file['type'] !== 'application/pdf') {
+				throw new InvalidArgumentException('CV must be a PDF file');
+			}
+			$url = self::$cv_base . uniqid('cv_') . '.pdf';
+			if (!move_uploaded_file($cv_file['tmp_name'], $_SERVER['DOCUMENT_ROOT'] . $url)) {
+				throw new Exception('unable to store CV file');
+			}
+			$this->cv_resource_url = $url;
+		} else {
+			$this->cv_resource_url = null;
+		}
+	}
+
+	protected function process(PDO $pdo): void
+	{
+		// 1. Upsert interviewee (creates if new, updates profile if existing)
+		$cv_sql = $this->cv_resource_url !== null
+			? "'{$this->cv_resource_url}'"
+			: "COALESCE((SELECT cv_resource_url FROM interviewee WHERE email = '{$this->email}'), NULL)";
+
+		$stmt = $pdo->prepare(
+			"INSERT INTO interviewee
+				(email, google_sub, display_name, avatar_url, department, masters, interests, cv_resource_url, active, available)
+			VALUES
+				(:email, :sub, :name, :avatar, :dept, :masters, :interests, {$cv_sql}, true, true)
+			ON CONFLICT (email) DO UPDATE SET
+				google_sub      = EXCLUDED.google_sub,
+				display_name    = EXCLUDED.display_name,
+				avatar_url      = EXCLUDED.avatar_url,
+				department      = EXCLUDED.department,
+				masters         = EXCLUDED.masters,
+				interests       = EXCLUDED.interests,
+				cv_resource_url = CASE WHEN EXCLUDED.cv_resource_url IS NOT NULL
+									 THEN EXCLUDED.cv_resource_url
+									 ELSE interviewee.cv_resource_url END
+			RETURNING id;"
+		);
+		$stmt->bindValue(':email', $this->email);
+		$stmt->bindValue(':sub', $this->google_sub);
+		$stmt->bindValue(':name', $this->display_name);
+		$stmt->bindValue(':avatar', $this->avatar_url);
+		$stmt->bindValue(':dept', $this->department);
+		$stmt->bindValue(':masters', $this->masters);
+		$stmt->bindValue(':interests', $this->interests);
+
+		if ($stmt->execute() === false) {
+			throw new Exception('failed to upsert interviewee');
+		}
+
+		$iwee_id = (int) $stmt->fetch()['id'];
+
+		// 2. Enqueue for selected companies (same logic as SecretaryEnqueueDequeue)
+		$ts = $pdo->query('SELECT NOW();')->fetch()['now'];
+
+		if (count($this->interviewer_ids) > 0) {
+			$values = implode(', ', array_map(
+				fn($id) => "({$id}, {$iwee_id}, 'ENQUEUED', '{$ts}')",
+				$this->interviewer_ids
+			));
+			$insert = "INSERT INTO interview (id_interviewer, id_interviewee, state_, state_timestamp)
+					   VALUES {$values}
+					   ON CONFLICT ON CONSTRAINT pair_interviewer_interviewee DO
+					   UPDATE SET state_timestamp = EXCLUDED.state_timestamp
+					   WHERE interview.state_ = EXCLUDED.state_;";
+			if ($pdo->query($insert) === false) {
+				throw new Exception('failed to enqueue for companies');
+			}
+		}
+
+		// 3. Remove ENQUEUED entries for companies the student de-selected
+		if (count($this->interviewer_ids) > 0) {
+			$ids_list = implode(',', $this->interviewer_ids);
+			$dequeue_sql = "DELETE FROM interview
+				WHERE id_interviewee = {$iwee_id}
+				AND state_ = 'ENQUEUED'
+				AND state_timestamp < '{$ts}'
+				AND id_interviewer NOT IN ({$ids_list});";
+		} else {
+			$dequeue_sql = "DELETE FROM interview
+				WHERE id_interviewee = {$iwee_id}
+				AND state_ = 'ENQUEUED'
+				AND state_timestamp < '{$ts}';";
+		}
+		if ($pdo->query($dequeue_sql) === false) {
+			throw new Exception('failed to dequeue old companies');
+		}
+	}
+
+	public function when_dispatch_fails(): void
+	{
+		if ($this->cv_resource_url !== null) {
+			$path = $_SERVER['DOCUMENT_ROOT'] . $this->cv_resource_url;
+			if (file_exists($path)) {
+				unlink($path);
+			}
+		}
+	}
+
+}
+
+/**
+ * Update CV for an existing candidate.
+ */
+class CandidateUpdateCV extends UpdateRequest
+{
+	private static string $cv_base = '/resources/cv/';
+	private readonly int $iwee_id;
+	private readonly string $cv_resource_url;
+
+	public function __construct(int $update_id_known, int $iwee_id, array $cv_file)
+	{
+		parent::__construct($update_id_known);
+		$this->iwee_id = $iwee_id;
+
+		if (($cv_file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+			throw new InvalidArgumentException('No file uploaded or upload error');
+		}
+		if ($cv_file['type'] !== 'application/pdf') {
+			throw new InvalidArgumentException('CV must be a PDF file');
+		}
+
+		$url = self::$cv_base . uniqid('cv_') . '.pdf';
+		if (!move_uploaded_file($cv_file['tmp_name'], $_SERVER['DOCUMENT_ROOT'] . $url)) {
+			throw new Exception('unable to store CV file');
+		}
+		$this->cv_resource_url = $url;
+	}
+
+	protected function process(PDO $pdo): void
+	{
+		// Update the CV URL in the database
+		$stmt = $pdo->prepare("UPDATE interviewee SET cv_resource_url = :cv WHERE id = :id");
+		$stmt->bindValue(':cv', $this->cv_resource_url);
+		$stmt->bindValue(':id', $this->iwee_id, PDO::PARAM_INT);
+
+		if ($stmt->execute() === false) {
+			throw new Exception('failed to update CV resource URL');
+		}
+	}
+
+	public function when_dispatch_fails(): void
+	{
+		if ($this->cv_resource_url !== null) {
+			$path = $_SERVER['DOCUMENT_ROOT'] . $this->cv_resource_url;
+			if (file_exists($path)) {
+				unlink($path);
+			}
+		}
+	}
+}
+
+/**
+ * Candidate leaves (dequeues themselves from) a single ENQUEUED company.
+ * Refuses if the state is no longer ENQUEUED (CALLING/HAPPENING/etc.).
+ */
+class CandidateLeaveQueue extends UpdateRequest
+{
+
+	private readonly int $iwee_id;
+	private readonly int $iwer_id;
+
+	public function __construct(int $update_id_known, int $iwee_id, int $iwer_id)
+	{
+		parent::__construct($update_id_known);
+		$this->iwee_id = $iwee_id;
+		$this->iwer_id = $iwer_id;
+	}
+
+	protected function process(PDO $pdo): void
+	{
+		$stmt = $pdo->query(
+			"DELETE FROM interview
+			WHERE id_interviewee = {$this->iwee_id}
+			AND id_interviewer   = {$this->iwer_id}
+			AND state_ = 'ENQUEUED';"
+		);
+		if ($stmt === false) {
+			throw new Exception('failed to execute query');
+		}
+		if ($stmt->rowCount() === 0) {
+			throw new UpdateHandleExpectedException(
+				'Cannot leave: your interview is already in progress or completed.'
+			);
+		}
+	}
+
+}
+
+/**
+ * Candidate joins a single additional company queue.
+ */
+class CandidateJoinQueue extends UpdateRequest
+{
+
+	private readonly int $iwee_id;
+	private readonly int $iwer_id;
+
+	public function __construct(int $update_id_known, int $iwee_id, int $iwer_id)
+	{
+		parent::__construct($update_id_known);
+		$this->iwee_id = $iwee_id;
+		$this->iwer_id = $iwer_id;
+	}
+
+	protected function process(PDO $pdo): void
+	{
+		$ts = $pdo->query('SELECT NOW();')->fetch()['now'];
+		$stmt = $pdo->query(
+			"INSERT INTO interview (id_interviewer, id_interviewee, state_, state_timestamp)
+			VALUES ({$this->iwer_id}, {$this->iwee_id}, 'ENQUEUED', '{$ts}')
+			ON CONFLICT ON CONSTRAINT pair_interviewer_interviewee DO NOTHING;"
+		);
+		if ($stmt === false) {
+			throw new Exception('failed to execute query');
+		}
+	}
+
+}
+
 
 class Postgres implements Database, DatabaseAdmin, DatabaseJobPositions
 {
@@ -1132,6 +1428,48 @@ class Postgres implements Database, DatabaseAdmin, DatabaseJobPositions
 		});
 	}
 
+	public function retrieve_company_view(): array
+	{
+		return $this->connect(true, function () {
+			try {
+				$this->pdo->beginTransaction();
+
+				$statement = $this->pdo->query("SELECT * FROM view_gatekeeper_iwers ORDER BY name ASC;");
+				if ($statement === false)
+					throw new Exception('failed interviewers query');
+				$retrieved['interviewers'] = $statement->fetchAll();
+
+				# Fetch all profile fields for interviewees
+				$statement = $this->pdo->query(
+					"SELECT id, email, display_name, avatar_url, department, masters, interests, cv_resource_url, active, available FROM interviewee ORDER BY id ASC;"
+				);
+				if ($statement === false)
+					throw new Exception('failed interviewees query');
+				$retrieved['interviewees'] = $statement->fetchAll();
+
+				$statement = $this->pdo->query("SELECT * FROM view_gatekeeper_iws;");
+				if ($statement === false)
+					throw new Exception('failed iws query');
+				$retrieved['interviews'] = $statement->fetchAll();
+
+				$statement = $this->pdo->query("SELECT * FROM interview WHERE state_ IN ('ENQUEUED', 'CALLING', 'DECISION', 'HAPPENING', 'COMPLETED') ORDER BY id ASC;");
+				if ($statement === false)
+					throw new Exception('failed all_interviews query');
+				$retrieved['all_interviews'] = $statement->fetchAll();
+
+				$statement = $this->pdo->query("SELECT * FROM update_recent_id;");
+				$retrieved['update'] = $statement === false ? 0 : $statement->fetch()['recent'];
+
+				$this->pdo->commit();
+				return $retrieved;
+			} catch (Throwable $th) {
+				if ($this->pdo->inTransaction())
+					$this->pdo->rollBack();
+			}
+			return [];
+		});
+	}
+
 	public function retrieve_queues_view(): array
 	{
 		return $this->connect(true, function () {
@@ -1194,6 +1532,63 @@ class Postgres implements Database, DatabaseAdmin, DatabaseJobPositions
 		});
 	}
 
+	public function candidate_by_google_sub(string $google_sub): array|false
+	{
+		return $this->connect(true, function () use ($google_sub) {
+			$stmt = $this->pdo->prepare("SELECT * FROM interviewee WHERE google_sub = :sub LIMIT 1;");
+			$stmt->bindValue(':sub', $google_sub);
+			$stmt->execute();
+			$row = $stmt->fetch();
+			return $row ?: false;
+		});
+	}
+
+	public function candidate_by_email(string $email): array|false
+	{
+		return $this->connect(true, function () use ($email) {
+			$stmt = $this->pdo->prepare("SELECT * FROM interviewee WHERE email = :email LIMIT 1;");
+			$stmt->bindValue(':email', $email);
+			$stmt->execute();
+			$row = $stmt->fetch();
+			return $row ?: false;
+		});
+	}
+
+	public function candidate_dashboard_view(int $interviewee_id): array
+	{
+		return $this->connect(true, function () use ($interviewee_id) {
+			try {
+				$this->pdo->beginTransaction();
+
+				$stmt = $this->pdo->query("SELECT id, name, image_resource_url, table_number, active FROM interviewer ORDER BY name ASC;");
+				if ($stmt === false)
+					throw new Exception('query failed');
+				$retrieved['interviewers'] = $stmt->fetchAll();
+
+				$stmt = $this->pdo->prepare(
+					"SELECT interview.*, interviewer.name AS company_name
+					FROM interview
+					JOIN interviewer ON interviewer.id = interview.id_interviewer
+					WHERE interview.id_interviewee = :iwee_id
+					ORDER BY interview.id ASC;"
+				);
+				$stmt->bindValue(':iwee_id', $interviewee_id, PDO::PARAM_INT);
+				$stmt->execute();
+				$retrieved['interviews'] = $stmt->fetchAll();
+
+				$stmt = $this->pdo->query("SELECT * FROM update_recent_id;");
+				$retrieved['update'] = $stmt === false ? 0 : $stmt->fetch()['recent'];
+
+				$this->pdo->commit();
+				return $retrieved;
+			} catch (Throwable $th) {
+				if ($this->pdo->inTransaction())
+					$this->pdo->rollBack();
+			}
+			return ['interviewers' => [], 'interviews' => [], 'update' => 0];
+		});
+	}
+
 	// ||
 	// \/ methods of DatabaseAdmin interface
 
@@ -1235,6 +1630,15 @@ class Postgres implements Database, DatabaseAdmin, DatabaseJobPositions
 					id SERIAL PRIMARY KEY,
 
 					email VARCHAR(255) UNIQUE NOT NULL,
+
+					-- Candidate self-registration fields (nullable for secretary-added interviewees)
+					google_sub TEXT UNIQUE,
+					display_name TEXT,
+					avatar_url TEXT,
+					department TEXT,
+					masters TEXT,
+					interests TEXT,
+					cv_resource_url TEXT,
 
 					active BOOLEAN NOT NULL,
 					available BOOLEAN NOT NULL

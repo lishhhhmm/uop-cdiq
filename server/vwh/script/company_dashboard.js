@@ -80,7 +80,7 @@ function update_dashboard(data) {
     update_current_interview(current, interviewees, companyId, company, waiting, allInterviews);
     update_pause_logic(company, companyId, current);
     update_queue_list(waiting, interviewees, allInterviews, company);
-    update_history_list(completed);
+    update_history_list(completed, interviewees);
 }
 
 function update_current_interview(current, interviewees, companyId, company, waiting, allInterviews) {
@@ -94,12 +94,17 @@ function update_current_interview(current, interviewees, companyId, company, wai
     const noInterviewStatusText = document.getElementById('no-interview-status-text');
     const noInterviewHintText = document.getElementById('no-interview-hint-text');
 
-    const btnArrived = document.getElementById('btn-arrived');
-    const btnComplete = document.getElementById('btn-complete');
-    const btnNoShow = document.getElementById('btn-no-show');
 
     const timerContainer = document.getElementById('interview-timer-container');
     const timerDisplay = document.getElementById('interview-timer');
+
+    // Profile block elements
+    const profileBlock = document.getElementById('candidate-profile-info');
+    const elAvatar = document.getElementById('cand-avatar');
+    const elFullname = document.getElementById('cand-fullname');
+    const elChips = document.getElementById('cand-chips');
+    const elCvLink = document.getElementById('cand-cv-link');
+    const elInterests = document.getElementById('cand-interests');
 
     if (live_timer_interval) {
         clearInterval(live_timer_interval);
@@ -154,9 +159,78 @@ function update_current_interview(current, interviewees, companyId, company, wai
     intervieweeEmail.textContent = iwee ? iwee.email : 'Unknown Candidate';
     intervieweeNumber.textContent = "Candidate #" + current.id_interviewee;
 
-    btnArrived.style.display = 'none';
-    btnComplete.style.display = 'none';
-    btnNoShow.style.display = 'none';
+    // ── Candidate profile block ──────────────────────────────────────────
+    if (profileBlock) {
+        const hasName = iwee && iwee.display_name;
+        const hasAvatar = iwee && iwee.avatar_url;
+        const hasDept = iwee && iwee.department;
+        const hasMasters = iwee && iwee.masters;
+        const hasInterests = iwee && iwee.interests;
+        const hasCv = iwee && iwee.cv_resource_url;
+        const hasAnyProfile = hasName || hasAvatar || hasDept || hasMasters || hasInterests || hasCv;
+
+        if (hasAnyProfile) {
+            profileBlock.style.display = 'block';
+
+            // Avatar
+            if (hasAvatar) {
+                elAvatar.src = iwee.avatar_url;
+                elAvatar.style.display = 'block';
+            } else {
+                elAvatar.style.display = 'none';
+            }
+
+            // Full name (fallback to email)
+            elFullname.textContent = hasName ? iwee.display_name : (iwee ? iwee.email : '');
+
+            // Chips: department + masters
+            elChips.innerHTML = '';
+            const chipStyle = 'padding:0.15rem 0.55rem; border-radius:999px; font-size:0.72rem; font-weight:600; background:var(--surface-primary); border:1px solid var(--border-subtle); color:var(--text-secondary);';
+            if (hasDept) {
+                const c = document.createElement('span');
+                c.setAttribute('style', chipStyle);
+                c.textContent = iwee.department;
+                elChips.appendChild(c);
+            }
+            if (hasMasters && iwee.masters.toLowerCase() !== 'no') {
+                const c = document.createElement('span');
+                c.setAttribute('style', chipStyle + ' color:var(--accent-primary,#6366f1);');
+                c.textContent = 'MSc: ' + iwee.masters;
+                elChips.appendChild(c);
+            }
+
+            // Interests
+            if (hasInterests) {
+                elInterests.textContent = '🎯 Interests: ' + iwee.interests;
+                elInterests.style.display = 'block';
+            } else {
+                elInterests.style.display = 'none';
+            }
+
+            // CV link
+            if (hasCv) {
+                elCvLink.style.display = 'inline-block';
+                elCvLink.href = iwee.cv_resource_url;
+                elCvLink.onclick = (e) => {
+                    e.preventDefault();
+                    const modal = document.getElementById('dialog_cv_preview');
+                    const iframe = document.getElementById('cv_iframe');
+                    const title = document.getElementById('cv_preview_title');
+                    const btnExt = document.getElementById('btn_cv_external');
+
+                    title.textContent = "CV: " + (iwee.display_name || iwee.email);
+                    btnExt.href = iwee.cv_resource_url;
+                    iframe.src = iwee.cv_resource_url;
+                    modal.showModal();
+                };
+            } else {
+                elCvLink.style.display = 'none';
+            }
+        } else {
+            profileBlock.style.display = 'none';
+        }
+    }
+
 
     const friendlyState = current.state_ === 'HAPPENING' ? 'Interviewing' :
         (current.state_ === 'CALLING' || current.state_ === 'DECISION') ? 'Waiting for Candidate to Arrive' : current.state_;
@@ -167,25 +241,6 @@ function update_current_interview(current, interviewees, companyId, company, wai
         if (timerContainer) timerContainer.style.display = 'none';
         stateBadge.style.background = current.state_ === 'CALLING' ? 'var(--color-status--calling)' : 'var(--color-status--decision)';
         stateBadge.style.color = '#fff';
-        btnArrived.style.display = 'block';
-        btnNoShow.style.display = 'block';
-
-        btnArrived.onclick = () => {
-            const formData = new FormData();
-            formData.append('button_to_happening', 'true');
-            formData.append('input_interview_id', current.id);
-            submit_action(formData);
-        };
-
-        btnNoShow.onclick = () => {
-            if (confirm("Mark as NO SHOW? The candidate will be removed from the current queue.")) {
-                const formData = new FormData();
-                formData.append('button_no_show', 'true');
-                formData.append('input_interviewee_id', current.id_interviewee);
-                submit_action(formData);
-            }
-        };
-
         if (current.state_ === 'CALLING') {
             const startTimer = () => {
                 let remaining = stateTimestamp + (calling_time_in_seconds * 1000) - Date.now();
@@ -201,17 +256,6 @@ function update_current_interview(current, interviewees, companyId, company, wai
         if (timerContainer) timerContainer.style.display = 'block';
         stateBadge.style.background = 'var(--color-status--happening)';
         stateBadge.style.color = '#fff';
-        btnComplete.style.display = 'block';
-
-        btnComplete.onclick = () => {
-            if (confirm("Mark interview as COMPLETED?")) {
-                const formData = new FormData();
-                formData.append('button_to_completed', 'true');
-                formData.append('input_interview_id', current.id);
-                submit_action(formData);
-            }
-        };
-
         const INTERVIEW_LIMIT_SEC = 10 * 60; // 10 minutes
 
         const startTimer = () => {
@@ -348,7 +392,7 @@ function update_queue_list(waiting, interviewees, allInterviews, company) {
     });
 }
 
-function update_history_list(completed) {
+function update_history_list(completed, interviewees = []) {
     const historyList = document.getElementById('history-list');
     const btnShowMore = document.getElementById('btn-show-more');
     historyList.innerHTML = '';
@@ -363,6 +407,12 @@ function update_history_list(completed) {
     const toShow = completed.slice(0, visibleCount);
 
     toShow.forEach(iw => {
+        const iwee = interviewees.find(i => i.id == iw.id_interviewee);
+        const label = iwee
+            ? (iwee.display_name || iwee.email || ('Candidate #' + iw.id_interviewee))
+            : ('Candidate #' + iw.id_interviewee);
+        const sub = iwee && iwee.display_name ? iwee.email : '';
+
         const div = document.createElement('div');
         div.style.padding = '0.5rem 1rem';
         div.style.background = 'var(--surface-secondary)';
@@ -370,11 +420,15 @@ function update_history_list(completed) {
         div.style.fontSize = '0.85rem';
         div.style.display = 'flex';
         div.style.justifyContent = 'space-between';
+        div.style.alignItems = 'center';
         div.style.color = 'var(--text-secondary)';
 
         div.innerHTML = `
-            <span>Candidate #${iw.id_interviewee}</span>
-            <span>Completed</span>
+            <div style="display:flex;flex-direction:column;">
+                <span style="color:var(--text-primary);font-weight:500;">${label}</span>
+                ${sub ? `<span style="font-size:0.75rem;">${sub}</span>` : ''}
+            </div>
+            <span style="color:var(--color-status--available,#22c55e);font-weight:600;font-size:0.75rem;text-transform:uppercase;">Completed</span>
         `;
         historyList.appendChild(div);
     });
@@ -384,7 +438,7 @@ function update_history_list(completed) {
         btnShowMore.textContent = history_expanded ? "Show Less" : "Show More (" + (completed.length - 2) + " more)";
         btnShowMore.onclick = () => {
             history_expanded = !history_expanded;
-            update_history_list(completed);
+            update_history_list(completed, interviewees);
         };
     } else {
         btnShowMore.style.display = 'none';

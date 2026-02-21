@@ -373,7 +373,11 @@ function update(data) {
 					iwer_info_dialog_id.value = interviewer['id'];
 					document.getElementById('iwer_info_dialog_name').value = interviewer['name'];
 					document.getElementById('iwer_info_dialog_table').value = interviewer['table'];
-					iwer_info_dialog_token.value = interviewer['token'] || '';
+
+					const expiresAt = interviewer['token_expires_at'];
+					const isExpired = expiresAt && (new Date(expiresAt.replace(' ', 'T') + 'Z') < new Date());
+					iwer_info_dialog_token.value = (interviewer['token'] && !isExpired) ? interviewer['token'] : '';
+					iwer_info_dialog_token.placeholder = isExpired ? 'Expired' : 'No active token';
 
 					iwer_button_add.dispatchEvent(new Event("click"));
 
@@ -400,7 +404,10 @@ function update(data) {
 		interviewer['token_expires_at'] = iwer_row['token_expires_at'];
 
 		if (iwer_info_dialog.open && iwer_info_dialog_id.value == interviewer['id']) {
-			iwer_info_dialog_token.value = interviewer['token'] || '';
+			const expiresAt = interviewer['token_expires_at'];
+			const isExpired = expiresAt && (new Date(expiresAt.replace(' ', 'T') + 'Z') < new Date());
+			iwer_info_dialog_token.value = (interviewer['token'] && !isExpired) ? interviewer['token'] : '';
+			iwer_info_dialog_token.placeholder = isExpired ? 'Expired' : 'No active token';
 		}
 
 		interviewer['element_img'].src = interviewer['image'];
