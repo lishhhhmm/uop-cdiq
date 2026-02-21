@@ -22,6 +22,9 @@ const iwer_info_dialog_id = document.getElementById('iwer_info_dialog_id');
 const iwer_info_dialog_token = document.getElementById('iwer_info_dialog_token');
 const iwer_info_dialog_generate_token = document.getElementById('iwer_info_dialog_generate_token');
 
+const form_button_update_top = document.getElementById('form_button_update_top');
+const form_button_update = document.getElementById('form_button_update');
+
 // TODO maybe validate that all elements needed exist? then move all document.get... up here
 
 // elements.forEach(element => {
@@ -206,21 +209,20 @@ form.addEventListener("submit", function (event) {
 
 		let button_active_inactive = document.getElementById('iwee_button_active_inactive');
 		let button_delete = document.getElementById('iwee_button_delete');
-		let button_update = document.getElementById('form_button_update');
 
-		if ([button_active_inactive, button_delete, button_update].indexOf(button) === -1) {
+		if ([button_active_inactive, button_delete, form_button_update, form_button_update_top].indexOf(button) === -1) {
 			return ret_value;
 		}
 
 		if (option_selected === iwee_option_empty) {
-			if (button === button_update && iwee_filter.value !== '') {
+			if ((button === form_button_update || button === form_button_update_top) && iwee_filter.value !== '') {
 				ret_value = 'CREATING a candidate with email "' + iwee_filter.value + '".';
 			}
 		}
 		else { // if(option_selected !== iwee_option_empty) => some interviewee
 			let interviewee_selected = interviewees[option_selected.value];
 
-			if (button === button_update) {
+			if (button === form_button_update || button === form_button_update_top) {
 				ret_value = 'UPDATING';
 			}
 			else if (button === button_active_inactive) {

@@ -257,6 +257,9 @@ $a->body_main = function () { ?>
 			<p id="iwee_notice" style="text-align: center;"></p>
 		</fieldset> <!-- interviewee -->
 
+		<button id="form_button_update_top" name="form_button_update_top" type="submit"
+			style="margin: 0.5rem 0; width: 100%;">Update</button>
+
 		<fieldset id="iwer_fieldset"> <!-- interviewer -->
 			<legend>Interviewer(s)</legend>
 
