@@ -213,17 +213,13 @@ class ElementInterviewerCandidate extends Observer {
                     switch (iw.getState()) {
                         case 'CALLING': {
                             let rem = iw.getStateTimestamp() + calling_time_in_seconds * 1000 - Date.now();
-                            rem = new Date(rem > 0 ? rem : 0);
-                            const remStr = (rem.getUTCMinutes() < 10 ? '0' : '') + rem.getUTCMinutes() + ':' +
-                                (rem.getUTCSeconds() < 10 ? '0' : '') + rem.getUTCSeconds();
+                            const remStr = formatDuration(rem > 0 ? rem : 0);
                             si2.innerHTML = `Calling Candidate <span class="called-number">${iw.getInterviewee().getId()}</span><br>Remaining: <span>${remStr}</span>`;
                             break;
                         }
                         case 'HAPPENING': {
                             let el = Date.now() - iw.getStateTimestamp();
-                            el = new Date(el);
-                            const elStr = (el.getUTCMinutes() < 10 ? '0' : '') + el.getUTCMinutes() + ':' +
-                                (el.getUTCSeconds() < 10 ? '0' : '') + el.getUTCSeconds();
+                            const elStr = formatDuration(el);
                             si2.innerHTML = `Happening with Candidate <span class="called-number">${iw.getInterviewee().getId()}</span><br>Elapsed: <span>${elStr}</span>`;
                             break;
                         }

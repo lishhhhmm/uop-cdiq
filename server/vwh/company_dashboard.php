@@ -8,119 +8,125 @@ $a->custom_nav = [
 ];
 
 $a->body_main = function () { ?>
-    <div id="company-profile"
-        style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem; padding: 1.5rem; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-subtle);">
-        <img id="company-logo" src="" alt="Logo"
-            style="width: 80px; height: 80px; border-radius: 8px; object-fit: cover; background: var(--surface-secondary);">
-        <div style="flex-grow: 1;">
-            <h1 id="company-name" style="margin: 0; font-size: 1.5rem; color: var(--text-primary);"></h1>
-            <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.25rem;">
-                <p id="company-table" style="margin: 0; font-weight: 600; color: var(--accent-primary);"></p>
-                <div id="company-status-badge"
-                    style="padding: 0.15rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">
+    <div class="comp-dashboard-container animate-fade-in">
+        <!-- Main Content Area -->
+        <div class="comp-main-content">
+            <!-- Profile Card -->
+            <div class="comp-profile-card">
+                <img id="company-logo" src="" alt="Logo" class="comp-profile-card__logo">
+                <div class="comp-profile-card__info">
+                    <h1 id="company-name"></h1>
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem;">
+                        <span id="company-table" class="comp-table-tag" style="margin-top: 0;"></span>
+                        <div id="company-status-badge" class="comp-status-tag" style="font-size: 0.75rem; color: white;">
+                        </div>
+                    </div>
+                </div>
+                <div class="comp-header-actions">
+                    <a href="/company_logout.php" class="btn-outline-sm danger">Sign Out</a>
+                </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="comp-stats-grid">
+                <div class="comp-stat-card">
+                    <span class="comp-stat-card__label">Waiting in Queue</span>
+                    <div id="queue-count" class="comp-stat-card__value">0</div>
+                </div>
+                <div class="comp-stat-card">
+                    <span class="comp-stat-card__label">Total Completed</span>
+                    <div id="completed-count" class="comp-stat-card__value">0</div>
+                </div>
+            </div>
+
+            <!-- Live Session Container -->
+            <div id="live-session-wrapper">
+                <!-- Current Interview Card -->
+                <div id="current-interview" class="comp-live-session comp-live-session--active" style="display: none;">
+                    <div class="comp-live-session__label">Current Interview Session</div>
+
+                    <div id="interview-state-badge" class="comp-status-tag" style="margin-bottom: 1rem; color: white;">
+                    </div>
+
+                    <div class="comp-candidate-display">
+                        <div id="interviewee-number" class="comp-candidate-number"></div>
+                        <div id="interviewee-email" class="comp-candidate-email"></div>
+                    </div>
+
+                    <!-- Detailed Candidate Profile (Toggled by JS) -->
+                    <div id="candidate-profile-info" class="glass"
+                        style="display:none; margin: 1.5rem auto; max-width: 500px; padding: 1.25rem; border-radius: var(--radius-lg); text-align: left; border: 1px solid var(--border);">
+                        <div style="display:flex; align-items:center; gap: 1rem;">
+                            <img id="cand-avatar" src="" alt=""
+                                style="width:56px; height:56px; border-radius:50%; object-fit:cover; border: 2px solid var(--brand-maroon); display:none;">
+                            <div style="flex:1;">
+                                <div id="cand-fullname"
+                                    style="font-weight:700; color:var(--text-primary); font-size: 1.1rem;"></div>
+                                <div id="cand-chips" style="display:flex; gap:0.4rem; flex-wrap:wrap; margin-top:0.4rem;">
+                                </div>
+                            </div>
+                            <a id="cand-cv-link" href="#" target="_blank" class="btn-primary"
+                                style="padding: 0.45rem 0.9rem; font-size: 0.8rem; border-radius: 6px;">📄 CV</a>
+                        </div>
+                        <p id="cand-interests"
+                            style="margin-top: 1rem; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;">
+                        </p>
+                    </div>
+
+                    <div id="interview-timer-container" class="comp-timer-display" style="display:none;">
+                        <div id="interview-timer" class="comp-timer-large">10:00</div>
+                        <div class="comp-timer-label">Suggested Duration</div>
+                    </div>
+                </div>
+
+                <!-- No Interview / Available State -->
+                <div id="no-current-interview" class="comp-live-session">
+                    <div class="comp-empty-state">
+                        <span style="font-size: 3.5rem; display: block; margin-bottom: 1rem;">🏢</span>
+                        <p id="no-interview-status-text"
+                            style="font-size: 1.25rem; color: var(--text-primary); margin-bottom: 0.5rem;"></p>
+                        <p id="no-interview-hint-text"
+                            style="font-size: 0.9rem; color: var(--text-secondary); max-width: 320px; margin: 0 auto;"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Global Status Control -->
+            <div class="comp-controls">
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <button id="btn-pause" class="btn-primary comp-controls__btn">Pause Dashboard</button>
+                        <button type="button" class="btn-outline-sm maroon"
+                            onclick="document.getElementById('dialog_info').showModal();"
+                            style="width: 44px; height: 44px; padding: 0; font-size: 1.2rem;">ⓘ</button>
+                    </div>
+                    <p id="status-hint" class="comp-controls__hint"></p>
                 </div>
             </div>
         </div>
-        <a href="/company_logout.php" class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem; border: 1px solid var(--border-subtle); background: var(--surface-primary); color: var(--brand-maroon); font-weight: 600; text-decoration: none; border-radius: 6px;">Sign Out</a>
-    </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
-        <div style="padding: 1rem; background: var(--surface-secondary); border-radius: 8px; text-align: center;">
-            <p style="margin: 0; font-size: 0.875rem; color: var(--text-secondary);">Waiting</p>
-            <p id="queue-count" style="margin: 0.5rem 0 0; font-size: 2rem; font-weight: bold; color: var(--brand-maroon);">
-                0</p>
-        </div>
-        <div style="padding: 1rem; background: var(--surface-secondary); border-radius: 8px; text-align: center;">
-            <p style="margin: 0; font-size: 0.875rem; color: var(--text-secondary);">Completed Today</p>
-            <p id="completed-count"
-                style="margin: 0.5rem 0 0; font-size: 2rem; font-weight: bold; color: var(--brand-green, #4CAF50);">0</p>
-        </div>
-    </div>
-
-    <div id="current-interview"
-        style="display: none; margin-bottom: 2rem; padding: 1.5rem; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-subtle);">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-            <div>
-                <p id="interviewee-email" style="margin: 0; font-weight: 600; color: var(--text-primary);"></p>
-                <p id="interviewee-number"
-                    style="margin: 0.25rem 0 0; color: var(--brand-maroon); font-weight: 700; font-size: 1.2rem;"></p>
-            </div>
-            <div id="interview-state-badge"
-                style="padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.875rem; font-weight: 600;"></div>
-        </div>
-
-        <!-- ── Candidate profile (populated by JS when data available) ── -->
-        <div id="candidate-profile-info"
-            style="display:none; margin-bottom: 1.25rem; padding: 1rem; background: var(--surface-secondary); border-radius: 8px; border: 1px solid var(--border-subtle);">
-            <div style="display:flex; align-items:center; gap: 1rem; flex-wrap:wrap;">
-                <img id="cand-avatar" src="" alt=""
-                    style="width:52px;height:52px;border-radius:50%;object-fit:cover;background:var(--surface-primary); display:none;">
-                <div style="flex:1; min-width:0;">
-                    <p id="cand-fullname" style="margin:0; font-size:1.05rem; font-weight:700; color:var(--text-primary);">
-                    </p>
-                    <div id="cand-chips" style="display:flex; gap:0.4rem; flex-wrap:wrap; margin-top:0.35rem;"></div>
+        <!-- Sidebar Area -->
+        <div class="comp-sidebar">
+            <!-- Queue Section -->
+            <div id="queue-container" class="comp-sidebar-section">
+                <div class="comp-sidebar-section__title">Queue Status</div>
+                <div id="queue-list">
+                    <!-- Populated by JS -->
                 </div>
-                <a id="cand-cv-link" href="#" target="_blank" rel="noopener"
-                    style="display:none; padding:0.35rem 0.85rem; border-radius:6px; background:var(--brand-maroon,#7b1a1a); color:#fff; font-size:0.8rem; font-weight:600; text-decoration:none; flex-shrink:0;">
-                    📄 CV
-                </a>
             </div>
-            <p id="cand-interests"
-                style="display:none; margin: 0.6rem 0 0; font-size:0.82rem; color:var(--text-secondary); line-height:1.4;">
-            </p>
-        </div>
 
-        <div id="interview-timer-container" style="margin-bottom: 1.5rem; text-align: center; display: none;">
-            <div id="interview-timer"
-                style="font-size: 2.5rem; font-weight: 800; font-family: monospace; color: var(--brand-green, #4CAF50);">
-                10:00</div>
-            <p
-                style="margin: 0.25rem 0 0; font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">
-                Interview Time (Suggestive)</p>
-        </div>
-    </div>
-
-    <div id="no-current-interview"
-        style="margin-bottom: 2rem; padding: 1.5rem; background: var(--surface-primary); border-radius: 12px; border: 1px solid var(--border-subtle); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 150px; opacity: 0.7;">
-        <p id="no-interview-status-text"
-            style="font-size: 1.2rem; font-weight: 600; color: var(--text-secondary); margin: 0; text-align: center;">
-            Waiting for candidates...</p>
-        <p id="no-interview-hint-text"
-            style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.5rem; text-align: center;">You are
-            currently available.<br>The first available candidate in your queue will be automatically called.</p>
-    </div>
-
-    <div id="queue-container" style="margin-bottom: 2rem;">
-        <h3 style="margin-bottom: 1rem;text-align: center;">Waiting Queue</h3>
-        <div id="queue-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
-            <!-- Filled via JavaScript -->
-        </div>
-    </div>
-
-    <div id="history-container" style="margin-bottom: 3rem; opacity: 0.85;">
-        <h3
-            style="text-align: center; margin-bottom: 1rem; color: var(--text-secondary); font-size: 1.1rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.5rem;">
-            Recent History</h3>
-        <div id="history-list" style="display: flex; flex-direction: column; gap: 0.5rem;">
-            <!-- Filled via JavaScript -->
-        </div>
-        <button id="btn-show-more" class="btn-secondary"
-            style="margin-top: 1rem; width: 100%; display: none; background: var(--surface-secondary); color: var(--text-primary); border: 1px solid var(--border-subtle);">Show
-            More</button>
-    </div>
-
-    <div id="status-controls"
-        style="margin-top: 2rem; padding: 2rem; background: var(--surface-primary); border-radius: 12px; text-align: center; border: 1px solid var(--border-subtle);">
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <button id="btn-pause" class="btn-primary"
-                    style="padding: 0.75rem 2.5rem; font-size: 1.1rem; min-width: 250px;">Pause Interviews</button>
-                <button type="button" class="btn-secondary" onclick="document.getElementById('dialog_info').showModal();"
-                    style="border-radius: 50%; width: 40px; height: 40px; padding: 0; display: flex; align-items: center; justify-content: center; font-weight: bold; background: var(--surface-secondary); color: var(--brand-maroon);">?</button>
+            <!-- History Section -->
+            <div id="history-container" class="comp-sidebar-section">
+                <div class="comp-sidebar-section__title">Recent Sessions</div>
+                <div id="history-list">
+                    <!-- Populated by JS -->
+                </div>
+                <button id="btn-show-more" class="btn-outline-sm maroon"
+                    style="width: 100%; margin-top: 1.25rem; display: none;">See All Completed</button>
             </div>
-            <p id="status-hint" style="color: var(--text-secondary); margin: 0; font-size: 0.9rem; max-width: 400px;"></p>
         </div>
     </div>
+
 
     <!-- Pause Confirmation Dialog -->
     <dialog id="dialog_pause_confirm" onclick="if(event.target===this)this.close();"
@@ -198,10 +204,12 @@ $a->body_main = function () { ?>
     <!-- CV Preview Modal -->
     <dialog id="dialog_cv_preview" onclick="if(event.target===this)this.close();"
         style="width: 90vw; max-width: 1000px; height: 90vh; border: none; border-radius: 12px; padding: 0; box-shadow: 0 10px 50px rgba(0,0,0,0.4); overflow: hidden; background: #525659;">
-        <div style="background: white; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle);">
+        <div
+            style="background: white; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle);">
             <h3 style="margin: 0; font-size: 1.2rem; color: var(--brand-maroon);" id="cv_preview_title">Candidate CV</h3>
             <div style="display: flex; gap: 0.75rem;">
-                <a id="btn_cv_external" href="#" target="_blank" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; text-decoration: none;">Open External ↗</a>
+                <a id="btn_cv_external" href="#" target="_blank" class="btn-secondary"
+                    style="padding: 0.4rem 0.8rem; font-size: 0.85rem; text-decoration: none;">Open External ↗</a>
                 <button onclick="document.getElementById('dialog_cv_preview').close();"
                     style="background: #eee; border: none; font-size: 1.5rem; color: #666; cursor: pointer; line-height: 1; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">×</button>
             </div>

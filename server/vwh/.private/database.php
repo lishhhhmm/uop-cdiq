@@ -739,6 +739,7 @@ interface DatabaseAdmin
 	public function operator_entries(): array;
 	public function operator_add(string $type, string $password, string $reminder): bool;
 	public function operator_remove(int|bool $id): bool;
+	public function operator_update_password(int $id, string $new_password): bool;
 }
 
 interface DatabaseJobPositions
@@ -1841,6 +1842,15 @@ class Postgres implements Database, DatabaseAdmin, DatabaseJobPositions
 			}
 
 			return $this->pdo->query($query) !== false;
+		});
+	}
+
+	public function operator_update_password(int $id, string $new_password): bool
+	{
+		return $this->connect(true, function () use ($id, $new_password) {
+			$pass = password_hash($new_password, PASSWORD_BCRYPT);
+			$statement = $this->pdo->prepare("UPDATE operator SET pass = :pass WHERE id = :id;");
+			return $statement->execute([':pass' => $pass, ':id' => $id]);
 		});
 	}
 

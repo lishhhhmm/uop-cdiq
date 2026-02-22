@@ -94,7 +94,8 @@ $a->body_main = function () { ?>
 				cancel it before pausing.</p>
 			<div style="display: flex; gap: 0.5rem;">
 				<button type="button" id="btn_complete_and_pause"
-					style="flex: 1; background: var(--color-status--calling); color: #ffffff;">✓ Complete & Pause</button>
+					style="flex: 1; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; border: none; box-shadow: var(--shadow-sm);">✓
+					Complete & Pause</button>
 				<button type="button" onclick="document.getElementById('dialog_pause_confirm').close();"
 					style="flex: 1;">Cancel</button>
 			</div>

@@ -1,8 +1,22 @@
-/dbms/vlpd
+# Database data
+dbms/vlpd/
 
-/server/cert
-/server/pkey
+# Sensitive private files
+server/vwh/.private/.superadmin_hash
 
-/server/vwh/resources/images/interviewer/i*
+# Admin/dev scripts (should not be in production)
+server/vwh/install_db.php
+server/vwh/seed.php
+server/vwh/migrate_candidate_fields.php
 
-**/__pycache__
+# Environment files
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

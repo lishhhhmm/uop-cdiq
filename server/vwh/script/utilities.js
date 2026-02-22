@@ -49,3 +49,20 @@ function copy_to_clipboard(text) {
 			}
 		);
 }
+
+function formatDuration(ms) {
+	const isNegative = ms < 0;
+	const absMs = Math.abs(ms);
+	const totalSeconds = Math.floor(absMs / 1000);
+	const hours = Math.floor(totalSeconds / 3600);
+	const minutes = Math.floor((totalSeconds % 3600) / 60);
+	const seconds = totalSeconds % 60;
+
+	const pad = (n) => (n < 10 ? '0' : '') + n;
+
+	if (hours > 0) {
+		return (isNegative ? "-" : "") + hours + ":" + pad(minutes) + ":" + pad(seconds);
+	} else {
+		return (isNegative ? "-" : "") + pad(minutes) + ":" + pad(seconds);
+	}
+}

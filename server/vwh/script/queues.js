@@ -365,10 +365,7 @@ class ElementInterviewer extends Observer {
 							case 'CALLING':
 								let remaining = iw.getStateTimestamp() + (calling_time_in_seconds * 1000) - Date.now();
 
-								remaining = new Date(remaining > 0 ? remaining : 0);
-
-								remaining = (remaining.getUTCMinutes() < 10 ? '0' : '') + remaining.getUTCMinutes() + ":"
-									+ (remaining.getUTCSeconds() < 10 ? '0' : '') + remaining.getUTCSeconds();
+								remaining = formatDuration(remaining > 0 ? remaining : 0);
 
 								// ---
 
@@ -383,10 +380,7 @@ class ElementInterviewer extends Observer {
 							case 'HAPPENING':
 								let elapsed = Date.now() - iw.getStateTimestamp();
 
-								elapsed = new Date(elapsed);
-
-								elapsed = (elapsed.getUTCMinutes() < 10 ? '0' : '') + elapsed.getUTCMinutes() + ":"
-									+ (elapsed.getUTCSeconds() < 10 ? '0' : '') + elapsed.getUTCSeconds();
+								elapsed = formatDuration(elapsed);
 
 								// ---
 

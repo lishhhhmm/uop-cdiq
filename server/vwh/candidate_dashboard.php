@@ -26,9 +26,59 @@ $a->body_main = function () use ($candidate, $candidate_row, $update_id, $flash)
     $reg_id = (int) $candidate_row['id'];
     ?>
 
-    <!-- The candidate dashboard uses the same <main> semantics as queues.php.
-     container_interviewers must be a DIRECT child of main (not wrapped in a card)
-     so the max-width:100% media query and card sizing rules fire correctly. -->
+    <!-- ── Information Section ── -->
+    <dialog id="dialog-info" class="info-dialog" onclick="if(event.target===this)this.close();">
+        <button class="dialog-close" onclick="this.closest('dialog').close();" aria-label="Close">×</button>
+        <h3>👋 Welcome to your Dashboard!</h3>
+        <p>This is where you manage your interviews for the Career Fair. Here is a quick guide:</p>
+
+        <hr>
+        <p><strong>📋 Your Profile</strong></p>
+        <ul>
+            <li>Your <strong>Registration №</strong> is your unique ID. When a company calls this number, it's time for your
+                interview!</li>
+            <li>Ensure your <strong>CV is uploaded</strong> so companies can review it.</li>
+        </ul>
+
+        <hr>
+        <p><strong>🚦 Interview Queues</strong></p>
+        <ul>
+            <li>Browse the list of companies and click <strong>Join Queue</strong> to enter the waiting line.</li>
+            <li>You can stay in multiple queues at once.</li>
+            <li>If you change your mind, you can <strong>Leave Queue</strong> anytime (unless you are being called).</li>
+        </ul>
+
+        <hr>
+        <p><strong>✨ Live Status</strong></p>
+        <ul>
+            <li>The Company that is currently calling you will be highlighted and will always come to the top of this list.
+                All other companies will be in a shadowed state.</li>
+            <li><span class='av'>Available</span>: The interviewer is free. Either no candidates are waiting, or the waiting
+                candidates are currently in other interviews.</li>
+            <li><span class='ca'>Calling</span>: A candidate is being called. If this is your number, go to the Gatekeeper
+                to start your interview.</li>
+            <li><span class='ha'>Happening</span>: The candidate arrived on time and the interview is in progress.</li>
+            <li><span class='de'>Decision</span>: The calling period has ended. The Gatekeeper decides whether the candidate
+                arrived on time. If this is your number and you have not arrived, you are considered late (you will be
+                removed from the queue).</li>
+            <li><span class='pa'>Paused</span>: The interviewer is temporarily unavailable and cannot conduct interviews.
+                You can still join this queue.</li>
+        </ul>
+
+        <hr>
+        <p>The dashboard updates automatically. No need to refresh!</p>
+        <button onclick="document.getElementById('dialog-info').close();" style="width:100%; margin-top:1rem;">Got
+            it!</button>
+    </dialog>
+
+    <div id="info-buttons" class="horizontal_buttons" style="margin-bottom: 1rem;">
+        <button type="button"
+            onclick="document.getElementById('dialog-info').showModal(); document.getElementById('dialog-info').scrollTo(0,0);">What
+            is this place?</button>
+        <button type="button" onclick="document.getElementById('info-buttons').style.display = 'none';">Hide</button>
+    </div>
+
+    <!-- The candidate dashboard uses the same <main> semantics as queues.php.-->
 
     <!-- ── Profile + Registration ID ── -->
     <div class="cand-profile-bar glass animate-fade-in">

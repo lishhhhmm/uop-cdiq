@@ -9,13 +9,10 @@ function update_dashboard(data) {
         return;
     }
 
-    // Auto-show help on first visit
-    if (!localStorage.getItem('dashboard_help_seen')) {
-        const helpDialog = document.getElementById('dialog_info');
-        if (helpDialog) {
-            helpDialog.showModal();
-            localStorage.setItem('dashboard_help_seen', 'true');
-        }
+    // Auto-show help on every visit
+    const helpDialog = document.getElementById('dialog_info');
+    if (helpDialog && !helpDialog.hasAttribute('open')) {
+        helpDialog.showModal();
     }
 
     calling_time_in_seconds = data.calling_time || 180;
@@ -40,35 +37,16 @@ function update_dashboard(data) {
 
         const companyStatusBadge = document.getElementById('company-status-badge');
         if (companyStatusBadge) {
+            // Note: In the new UI, the header status is less prominent or integrated differently.
+            // Keeping for future use if we add a top badge back, but usually handled by the live-session area now.
             if (!company.active) {
                 companyStatusBadge.textContent = "Paused";
+                companyStatusBadge.className = "comp-status-tag";
                 companyStatusBadge.style.background = "var(--color-status--unavailable)";
-            } else if (!current) {
-                // Check if anyone in queue is genuinely available
-                const anyReady = waiting.some(iw => {
-                    const iwee = interviewees.find(i => i.id == iw.id_interviewee);
-                    const isGloballyPaused = iwee && !iwee.active;
-                    const isBusyElsewhere = allInterviews.some(oi =>
-                        oi.id_interviewee == iw.id_interviewee &&
-                        ['CALLING', 'DECISION', 'HAPPENING'].includes(oi.state_)
-                    );
-                    return !isGloballyPaused && !isBusyElsewhere;
-                });
-
-                if (waiting.length > 0 && !anyReady) {
-                    companyStatusBadge.textContent = "Available";
-                    companyStatusBadge.style.background = "#0ea5e9"; // Orange
-                } else {
-                    companyStatusBadge.textContent = "Available";
-                    companyStatusBadge.style.background = "var(--color-status--available)";
-                }
-            } else if (current.state_ === 'HAPPENING') {
-                companyStatusBadge.textContent = "Interviewing";
-                companyStatusBadge.style.background = "var(--color-status--happening)";
             } else {
-                // CALLING or DECISION
-                companyStatusBadge.textContent = "Calling Candidate";
-                companyStatusBadge.style.background = "var(--color-status--calling)";
+                companyStatusBadge.textContent = "Active";
+                companyStatusBadge.className = "comp-status-tag";
+                companyStatusBadge.style.background = "var(--color-status--available)";
             }
             companyStatusBadge.style.color = "white";
         }
@@ -185,7 +163,7 @@ function update_current_interview(current, interviewees, companyId, company, wai
 
             // Chips: department + masters
             elChips.innerHTML = '';
-            const chipStyle = 'padding:0.15rem 0.55rem; border-radius:999px; font-size:0.72rem; font-weight:600; background:var(--surface-primary); border:1px solid var(--border-subtle); color:var(--text-secondary);';
+            const chipStyle = 'padding:0.2rem 0.6rem; border-radius:6px; font-size:0.75rem; font-weight:700; background:rgba(0,0,0,0.05); color:var(--text-secondary); border: 1px solid var(--border);';
             if (hasDept) {
                 const c = document.createElement('span');
                 c.setAttribute('style', chipStyle);
@@ -194,7 +172,7 @@ function update_current_interview(current, interviewees, companyId, company, wai
             }
             if (hasMasters && iwee.masters.toLowerCase() !== 'no') {
                 const c = document.createElement('span');
-                c.setAttribute('style', chipStyle + ' color:var(--accent-primary,#6366f1);');
+                c.setAttribute('style', chipStyle + ' color:var(--brand-maroon); background:rgba(157,28,32,0.05);');
                 c.textContent = 'MSc: ' + iwee.masters;
                 elChips.appendChild(c);
             }
@@ -240,14 +218,11 @@ function update_current_interview(current, interviewees, companyId, company, wai
     if (current.state_ === 'CALLING' || current.state_ === 'DECISION') {
         if (timerContainer) timerContainer.style.display = 'none';
         stateBadge.style.background = current.state_ === 'CALLING' ? 'var(--color-status--calling)' : 'var(--color-status--decision)';
-        stateBadge.style.color = '#fff';
+        stateBadge.className = 'comp-status-tag';
         if (current.state_ === 'CALLING') {
             const startTimer = () => {
                 let remaining = stateTimestamp + (calling_time_in_seconds * 1000) - Date.now();
-                remaining = Math.max(0, remaining);
-                const mins = Math.floor(remaining / 60000);
-                const secs = Math.floor((remaining % 60000) / 1000);
-                stateBadge.textContent = `Waiting for Candidate to Arrive (${mins}:${secs < 10 ? '0' : ''}${secs})`;
+                stateBadge.textContent = `Waiting for Candidate to Arrive (${formatDuration(remaining > 0 ? remaining : 0)})`;
             };
             startTimer();
             live_timer_interval = setInterval(startTimer, 1000);
@@ -255,28 +230,24 @@ function update_current_interview(current, interviewees, companyId, company, wai
     } else if (current.state_ === 'HAPPENING') {
         if (timerContainer) timerContainer.style.display = 'block';
         stateBadge.style.background = 'var(--color-status--happening)';
-        stateBadge.style.color = '#fff';
+        stateBadge.className = 'comp-status-tag';
         const INTERVIEW_LIMIT_SEC = 10 * 60; // 10 minutes
 
         const startTimer = () => {
-            let elapsedSec = Math.floor((Date.now() - stateTimestamp) / 1000);
-            let remainingSec = INTERVIEW_LIMIT_SEC - elapsedSec;
+            let elapsedMs = Date.now() - stateTimestamp;
+            let remainingMs = (INTERVIEW_LIMIT_SEC * 1000) - elapsedMs;
 
-            let isOverdue = remainingSec < 0;
-            let absRemaining = Math.abs(remainingSec);
-            let mins = Math.floor(absRemaining / 60);
-            let secs = absRemaining % 60;
-
-            let timeStr = (isOverdue ? "-" : "") + mins + ":" + (secs < 10 ? '0' : '') + secs;
+            let timeStr = formatDuration(remainingMs);
             if (timerDisplay) {
                 timerDisplay.textContent = timeStr;
 
                 // Color logic
-                if (remainingSec > 180) { // > 3 mins left
+                let remSec = remainingMs / 1000;
+                if (remSec > 180) { // > 3 mins left
                     timerDisplay.style.color = "var(--brand-green, #4CAF50)";
-                } else if (remainingSec > 60) { // 1-3 mins left
+                } else if (remSec > 60) { // 1-3 mins left
                     timerDisplay.style.color = "#FFC107"; // Yellow
-                } else if (remainingSec >= 0) { // < 1 min left
+                } else if (remSec >= 0) { // < 1 min left
                     timerDisplay.style.color = "#FF9800"; // Orange
                 } else { // Overdue
                     timerDisplay.style.color = "#F44336"; // Red
@@ -284,9 +255,7 @@ function update_current_interview(current, interviewees, companyId, company, wai
             }
 
             // Also update the badge text
-            let elapsedMins = Math.floor(elapsedSec / 60);
-            let elapsedSecsRemaining = elapsedSec % 60;
-            stateBadge.textContent = `Interviewing (${elapsedMins}:${elapsedSecsRemaining < 10 ? '0' : ''}${elapsedSecsRemaining})`;
+            stateBadge.textContent = `Interviewing (${formatDuration(elapsedMs)})`;
         };
         startTimer();
         live_timer_interval = setInterval(startTimer, 1000);
@@ -338,55 +307,42 @@ function update_queue_list(waiting, interviewees, allInterviews, company) {
     queueList.innerHTML = '';
 
     if (waiting.length === 0) {
-        if (company && company.active) {
-            queueList.innerHTML = '<div style="text-align: center; color: var(--text-secondary); margin: 2rem 0; padding: 2rem; border: 1px dashed var(--border-subtle); border-radius: 12px;">' +
-                '<p style="font-size: 1.1rem; margin-bottom: 0.5rem; color: var(--text-primary); font-weight: 600;">Queue is empty</p>' +
-                '<p style="font-size: 0.9rem; opacity: 0.8;">No available candidates at the moment.</p>' +
-                '</div>';
-        } else {
-            queueList.innerHTML = '<p style="text-align: center; color: var(--text-secondary); margin: 2rem 0;">No candidates waiting.</p>';
-        }
+        queueList.innerHTML = `
+            <div class="comp-empty-state">
+                <p>No candidates waiting.</p>
+            </div>`;
         return;
     }
 
     waiting.forEach((iw, index) => {
         const iwee = interviewees.find(i => i.id == iw.id_interviewee);
         const div = document.createElement('div');
-        div.className = 'queue-item';
-        div.style.padding = '0.75rem 1rem';
-        div.style.background = 'var(--surface-primary)';
-        div.style.borderRadius = '8px';
-        div.style.border = '1px solid var(--border-subtle)';
-        div.style.display = 'flex';
-        div.style.justifyContent = 'space-between';
-        div.style.alignItems = 'center';
-        div.style.marginBottom = '0.5rem';
+        div.className = 'comp-queue-item';
 
         const otherActiveInterviews = allInterviews.filter(oi =>
             oi.id_interviewee == iw.id_interviewee &&
             ['CALLING', 'DECISION', 'HAPPENING'].includes(oi.state_)
         );
 
-        let statusText = "Available";
-        let statusColor = "var(--color-status--available)";
+        let statusText = "Ready";
+        let statusBg = "var(--color-status--available)";
 
         if (iwee && !iwee.active) {
             statusText = "Paused";
-            statusColor = "var(--color-status--unavailable)";
+            statusBg = "var(--color-status--unavailable)";
         } else if (otherActiveInterviews.length > 0) {
-            statusText = "In Interview";
-            statusColor = "var(--color-status--happening)";
+            statusText = "Busy";
+            statusBg = "var(--color-status--happening)";
         }
 
         div.innerHTML = `
-            <div style="display: flex; flex-direction: column;">
-                <span style="font-weight: 500; color: var(--text-primary);">
-                    <span style="color: var(--text-secondary); margin-right: 0.5rem;">${index + 1}.</span>
-                    ${iwee ? iwee.email : 'Unknown Candidate'}
-                    <span style="color: var(--text-secondary); font-size: 0.8rem; margin-left: 0.5rem;">(#${iw.id_interviewee})</span>
+            <div class="comp-queue-item__info">
+                <span class="comp-queue-item__name">
+                    ${iwee ? (iwee.display_name || iwee.email) : 'Unknown'}
                 </span>
+                <span class="comp-queue-item__meta">Position #${index + 1} • ID #${iw.id_interviewee}</span>
             </div>
-            <span style="font-size: 0.75rem; font-weight: bold; color: ${statusColor}; text-shadow: 0 0 1px rgba(0,0,0,0.1); text-transform: uppercase;">${statusText}</span>
+            <span class="comp-status-tag" style="background:${statusBg}; color:white;">${statusText}</span>
         `;
         queueList.appendChild(div);
     });
@@ -414,28 +370,21 @@ function update_history_list(completed, interviewees = []) {
         const sub = iwee && iwee.display_name ? iwee.email : '';
 
         const div = document.createElement('div');
-        div.style.padding = '0.5rem 1rem';
-        div.style.background = 'var(--surface-secondary)';
-        div.style.borderRadius = '6px';
-        div.style.fontSize = '0.85rem';
-        div.style.display = 'flex';
-        div.style.justifyContent = 'space-between';
-        div.style.alignItems = 'center';
-        div.style.color = 'var(--text-secondary)';
+        div.className = 'comp-history-item';
 
         div.innerHTML = `
-            <div style="display:flex;flex-direction:column;">
-                <span style="color:var(--text-primary);font-weight:500;">${label}</span>
-                ${sub ? `<span style="font-size:0.75rem;">${sub}</span>` : ''}
+            <div class="comp-history-item__info">
+                <span class="comp-history-item__name">${label}</span>
+                ${sub ? `<span class="comp-history-item__meta">${sub}</span>` : ''}
             </div>
-            <span style="color:var(--color-status--available,#22c55e);font-weight:600;font-size:0.75rem;text-transform:uppercase;">Completed</span>
+            <span class="comp-status-tag" style="background:var(--color-status--completed); color:white; font-size:0.6rem;">Done</span>
         `;
         historyList.appendChild(div);
     });
 
-    if (completed.length > 2) {
+    if (completed.length > visibleCount || history_expanded) {
         btnShowMore.style.display = 'block';
-        btnShowMore.textContent = history_expanded ? "Show Less" : "Show More (" + (completed.length - 2) + " more)";
+        btnShowMore.textContent = history_expanded ? "Show Less" : "Show More (" + (completed.length - visibleCount) + ")";
         btnShowMore.onclick = () => {
             history_expanded = !history_expanded;
             update_history_list(completed, interviewees);
