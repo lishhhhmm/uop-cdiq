@@ -12,17 +12,8 @@
  * REPLACE_WITH_YOUR_CLIENT_ID in assembler/register page with your actual Google Client ID
  */
 
-// Parse the root .env file to extract the Google Client ID safely
-$env_path = dirname(__DIR__, 3) . '/.env';
-
-$client_id = '';
-if (file_exists($env_path)) {
-    $env_content = file_get_contents($env_path);
-    // Relaxed regex to account for potential leading whitespace, \r, and \n
-    if (preg_match('/CANDIDATE_GOOGLE_CLIENT_ID\s*=\s*[\'"]?([^\'"\r\n]+)[\'"]?/i', $env_content, $matches)) {
-        $client_id = trim($matches[1]);
-    }
-}
+// The Client ID is injected securely via Docker Compose environment variables
+$client_id = getenv('CANDIDATE_GOOGLE_CLIENT_ID') ?: '';
 
 define('CANDIDATE_GOOGLE_CLIENT_ID', $client_id !== '' ? $client_id : 'REPLACE_WITH_YOUR_CLIENT_ID');
 define('CANDIDATE_SESSION_KEY', 'candidate_profile');
