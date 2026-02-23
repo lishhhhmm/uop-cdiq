@@ -141,7 +141,7 @@ class Assembler
 			(function () {
 				window._userway_config = {
 					position: '5', // Standard Bottom Left
-					color: '#F7911E', // Career Fair Orange
+					color: '#F47920', // Career Fair Orange (System Brand)
 					language: 'en',
 					mobile: true,
 					account: 'L5D5s7Yq3N' // Official UoP Account ID
@@ -175,14 +175,10 @@ class Assembler
 		require_once $_SERVER['DOCUMENT_ROOT'] . '/.private/candidate_auth.php';
 		$_cand = candidate_session_get();
 
-		// If a company is logged in, show their dashboard button
+		// Mutually exclusive: Company Dashboard > Candidate Dashboard > Register
 		if (AssemblerOperate::operator_is(Operator::Company)): ?>
-			<a href="/company_dashboard.php" class="cta-nav"
-				style="background: linear-gradient(135deg, var(--brand-green) 0%, #5d8f28 100%) !important; box-shadow: 0 4px 15px rgba(136, 197, 64, 0.3);">My
-				Dashboard</a>
-		<?php endif;
-
-		if ($_cand !== false): ?>
+			<a href="/company_dashboard.php" class="cta-nav">My Dashboard</a>
+		<?php elseif ($_cand !== false): ?>
 			<a href="/candidate_dashboard.php" class="cta-nav">My Queues</a>
 		<?php else: ?>
 			<a href="/candidate_register.php" class="cta-nav">Register</a>
