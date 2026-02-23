@@ -13,6 +13,10 @@ server/vwh/migrate_candidate_fields.php
 .env
 .env.*
 
+# SSL Certificates (Should never be committed)
+server/cert
+server/pkey
+
 # OS files
 .DS_Store
 Thumbs.db
