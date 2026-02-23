@@ -11,9 +11,48 @@ $a->custom_nav = [
     'Logout' => 'javascript:void(0)'
 ];
 
-// Always require fresh login on page load
-unset($_SESSION['superadmin_auth']);
-$is_authed = false;
+// ── API: Auth ─────────────────────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Content-Type: application/json');
+    $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+
+    // Login
+    if (isset($input['superadmin_login'])) {
+        $pw = trim($input['password'] ?? '');
+        $hash_file = $_SERVER['DOCUMENT_ROOT'] . '/.superadmin_hash';
+
+        if (!file_exists($hash_file)) {
+            // Setup master password
+            if (strlen($pw) < 8) {
+                echo json_encode(['ok' => false, 'error' => 'Password must be at least 8 characters']);
+                exit;
+            }
+            file_put_contents($hash_file, password_hash($pw, PASSWORD_DEFAULT));
+            $_SESSION['superadmin_auth'] = true;
+            echo json_encode(['ok' => true]);
+            exit;
+        }
+
+        $hash = trim(file_get_contents($hash_file));
+        if (password_verify($pw, $hash)) {
+            $_SESSION['superadmin_auth'] = true;
+            echo json_encode(['ok' => true]);
+        } else {
+            echo json_encode(['ok' => false, 'error' => 'Invalid password']);
+        }
+        exit;
+    }
+
+    // Logout
+    if (isset($input['superadmin_logout'])) {
+        unset($_SESSION['superadmin_auth']);
+        echo json_encode(['ok' => true]);
+        exit;
+    }
+}
+
+// ── Protect Page Load ─────────────────────────────────────────────────────
+$is_authed = $_SESSION['superadmin_auth'] ?? false;
 
 $a->body_main = function () use ($is_authed) { ?>
 
@@ -349,7 +388,7 @@ $a->assemble(); ?>
         box-shadow: none !important;
     }
 
-    .test-action-btn > span:first-child {
+    .test-action-btn>span:first-child {
         color: #1e293b !important;
     }
 
@@ -363,7 +402,7 @@ $a->assemble(); ?>
         border-color: transparent !important;
     }
 
-    .test-action-btn:active > span:first-child,
+    .test-action-btn:active>span:first-child,
     .test-action-btn:active .test-action-sub {
         color: #ffffff !important;
     }
