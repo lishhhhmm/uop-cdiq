@@ -1817,9 +1817,7 @@ class Postgres implements Database, DatabaseAdmin, DatabaseJobPositions
 						image_resource_url,
 						table_number,
 						active,
-						available,
-						token,
-						token_expires_at
+						available
 					FROM interviewer
 					ORDER BY name;
 				",
@@ -1847,9 +1845,7 @@ class Postgres implements Database, DatabaseAdmin, DatabaseJobPositions
 						name,
 						image_resource_url,
 						table_number,
-						active,
-						token,
-						token_expires_at
+						active
 					FROM interviewer
 					ORDER BY name;
 				",
