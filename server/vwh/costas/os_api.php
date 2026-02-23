@@ -12,15 +12,13 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/.private/database.php';
 // Default password: superadmin2026
 // Change via the dashboard's 🔑 button or regenerate the hash file.
 
-function superadmin_get_hash(): string
+function superadmin_get_hash(): string|null
 {
     $hash_file = $_SERVER['DOCUMENT_ROOT'] . '/.private/.superadmin_hash';
     if (file_exists($hash_file)) {
         return trim(file_get_contents($hash_file));
     }
-    $hash = password_hash('superadmin2026', PASSWORD_BCRYPT);
-    file_put_contents($hash_file, $hash);
-    return $hash;
+    return null;
 }
 
 function superadmin_is_authenticated(): bool
@@ -58,6 +56,20 @@ if (isset($_POST['superadmin_login'])) {
     }
     $password = $_POST['password'] ?? '';
     $hash = superadmin_get_hash();
+
+    if ($hash === null) {
+        // First time setup
+        if (strlen($password) < 8) {
+            echo json_encode(['ok' => false, 'error' => 'Initial password must be at least 8 characters']);
+            exit;
+        }
+        $new_hash = password_hash($password, PASSWORD_BCRYPT);
+        file_put_contents($_SERVER['DOCUMENT_ROOT'] . '/.private/.superadmin_hash', $new_hash);
+        $_SESSION['superadmin_auth'] = true;
+        echo json_encode(['ok' => true, 'setup' => true]);
+        exit;
+    }
+
     if (password_verify($password, $hash)) {
         $_SESSION['superadmin_auth'] = true;
         $_SESSION['superadmin_attempts'] = 0;
