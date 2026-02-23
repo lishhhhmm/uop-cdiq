@@ -74,11 +74,5 @@ php .private/_admin/operators.php add gatekeeper gg
 # 3. Exit the container
 exit
 ```
-
-### 5. Final Setup
-1. Visit `https://apps.careerday.fet.uop.gr/costas/os.php` to access the Superadmin dashboard.
-2. Enter your master password to secure the `.superadmin_hash`.
-3. Use the new **🧪 Test Data** tab to instantly generate mock Companies and Candidates to test the flow!
-
 ---
 *Created for the UoP Career Fair 2026.*
