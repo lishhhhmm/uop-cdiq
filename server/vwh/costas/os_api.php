@@ -478,18 +478,36 @@ try {
             ];
 
             shuffle($company_names);
-            $names_to_add = array_slice($company_names, 0, 20); // 20 companies
+            $names_to_add = array_slice($company_names, 0, 20);
 
             $update_id = $db->update_happened_recent();
-            foreach ($names_to_add as $i => $name) {
-                // Table numbers 1 to 20
-                $table = (string) ($i + 1);
-                $req = new SecretaryAddInterviewer($update_id, $name, $table, null);
-                if ($db->update_handle($req) !== true)
-                    throw new Exception("Failed to add company $name");
+            $request = new class ($update_id, $names_to_add) extends UpdateRequest {
+                private array $names;
+                public function __construct(int $uid, array $names)
+                {
+                    parent::__construct($uid);
+                    $this->names = $names;
+                }
+                protected function process(PDO $pdo): void
+                {
+                    $values = [];
+                    foreach ($this->names as $i => $name) {
+                        $table = (string) ($i + 1);
+                        $placeholder = SecretaryAddInterviewer::iwerImageResourceUrlPlaceholder();
+                        $values[] = "('{$name}', '{$placeholder}', '{$table}', true, true)";
+                    }
+                    $sql = "INSERT INTO interviewer (name, image_resource_url, table_number, active, available) VALUES " . implode(', ', $values);
+                    if ($pdo->query($sql) === false) {
+                        throw new Exception("Failed to bulk insert companies");
+                    }
+                }
+            };
+
+            if ($db->update_handle($request) !== true) {
+                throw new Exception('Bulk generation failed');
             }
 
-            echo json_encode(['ok' => true, 'message' => 'Generated 20 companies']);
+            echo json_encode(['ok' => true, 'message' => 'Generated 20 companies in bulk']);
             break;
 
         // ── Generate Test Candidates ─────────────────────────────────────
@@ -558,10 +576,11 @@ try {
 
                     foreach ($iwees as $uid) {
                         // Drop each user into 1 to 4 random queues
-                        $queue_count = rand(1, 4);
-                        $chosen_iwers = (array) array_rand(array_flip($iwers), $queue_count);
+                        $queue_count = min(rand(1, 4), count($iwers));
+                        $keys = (array) array_rand($iwers, $queue_count);
 
-                        foreach ($chosen_iwers as $cid) {
+                        foreach ($keys as $key) {
+                            $cid = $iwers[$key];
                             $values[] = "({$cid}, {$uid}, 'ENQUEUED', '{$ts}')";
                         }
                     }

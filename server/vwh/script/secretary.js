@@ -371,20 +371,20 @@ function update(data) {
 			interviewer['element_input'].type = "checkbox";
 			interviewer['element_input'].name = "interviewers[]";
 			interviewer['element_input'].addEventListener('click', function (event) {
-				if (iwee_option_empty.selected === true) {
-					event.preventDefault();
+				event.preventDefault();
 
-					iwer_info_dialog_id.value = interviewer['id'];
-					document.getElementById('iwer_info_dialog_name').value = interviewer['name'];
-					document.getElementById('iwer_info_dialog_table').value = interviewer['table'];
+				iwer_info_dialog_id.value = interviewer['id'];
+				document.getElementById('iwer_info_dialog_name').value = interviewer['name'];
+				document.getElementById('iwer_info_dialog_table').value = interviewer['table'];
 
-					display(true, [iwer_info_dialog_delete, iwer_info_dialog_generate_token.parentElement.parentElement]);
+				display(true, [iwer_info_dialog_delete, iwer_info_dialog_generate_token.parentElement.parentElement]);
 
-					const expiresAt = interviewer['token_expires_at'];
-					const isExpired = expiresAt && (new Date(expiresAt.replace(' ', 'T') + 'Z') < new Date());
-					iwer_info_dialog_token.value = (interviewer['token'] && !isExpired) ? interviewer['token'] : '';
-					iwer_info_dialog_token.placeholder = isExpired ? 'Expired' : 'No active token';
-				}
+				const expiresAt = interviewer['token_expires_at'];
+				const isExpired = expiresAt && (new Date(expiresAt.replace(' ', 'T') + 'Z') < new Date());
+				iwer_info_dialog_token.value = (interviewer['token'] && !isExpired) ? interviewer['token'] : '';
+				iwer_info_dialog_token.placeholder = isExpired ? 'Expired' : 'No active token';
+
+				iwer_button_add.dispatchEvent(new Event("click"));
 			});
 			display(iwee_option_empty.selected === false, [interviewer['element_input']]);
 
