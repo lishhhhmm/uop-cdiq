@@ -282,11 +282,15 @@ class ElementInterviewerCandidate extends Observer {
             btn.addEventListener('click', () => submitCandidateAction('join', iwer.getId()));
             area.append(btn);
         } else if (myInterview.getState() === 'ENQUEUED') {
-            // Show Leave button
+            // Show Leave Queue button
             const btn = document.createElement('button');
             btn.className = 'queue-btn queue-btn--leave';
             btn.textContent = 'Leave Queue';
             btn.style.width = '100%';
+            btn.style.background = '#e11d48';
+            btn.style.color = '#ffffff';
+            btn.style.border = 'none';
+            btn.style.cursor = 'pointer';
             btn.addEventListener('click', () => {
                 if (confirm(`Leave the queue for ${iwer.getName()}?`)) {
                     submitCandidateAction('leave', iwer.getId());
@@ -374,20 +378,38 @@ class ElementDialogInterviewer extends Observer {
         const make = (interview, done = false) => {
             const iwee = interview.getInterviewee();
             const el = document.createElement('p');
-            el.classList.add('candidate');
+            el.classList.add('interviewee');
             el.textContent = iwee.getId();
 
             // Highlight this candidate's own entry
-            if (iwee.getId() == CANDIDATE_ID) el.classList.add('candidate--self');
+            if (iwee.getId() == CANDIDATE_ID) el.classList.add('interviewee--self');
 
-            if (done) { el.classList.add('candidate--completed'); return el; }
+            if (done) { el.classList.add('interviewee--completed'); return el; }
             if (interview === iw_c) {
                 el.classList.add({
-                    CALLING: 'candidate--calling', DECISION: 'candidate--decision', HAPPENING: 'candidate--happening'
+                    CALLING: 'interviewee--calling', DECISION: 'interviewee--decision', HAPPENING: 'interviewee--happening'
                 }[interview.getState()] ?? '');
                 return el;
             }
-            el.classList.add(iwee.getAvailable() ? 'candidate--available' : 'candidate--unavailable');
+            if (iwee.getAvailable() === true) {
+                el.classList.add('interviewee--available');
+            } else {
+                let active_state = null;
+                for (let oi of interviews.getAll()) {
+                    if (oi.getInterviewee() === iwee && ['CALLING', 'HAPPENING', 'DECISION'].includes(oi.getState())) {
+                        active_state = oi.getState();
+                        if (active_state === 'HAPPENING') break;
+                    }
+                }
+
+                if (active_state) {
+                    el.classList.add({
+                        CALLING: 'interviewee--calling', DECISION: 'interviewee--decision', HAPPENING: 'interviewee--happening'
+                    }[active_state] ?? 'interviewee--unavailable');
+                } else {
+                    el.classList.add('interviewee--unavailable');
+                }
+            }
             return el;
         };
 
@@ -526,11 +548,45 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const elBtnTogglePause = document.getElementById('btn-toggle-pause');
+    if (elBtnTogglePause) {
+        elBtnTogglePause.addEventListener('click', () => {
+            const formData = new FormData();
+            formData.append('action', 'toggle_pause');
+            formData.append('update_id', latest_update_id);
+
+            elBtnTogglePause.disabled = true;
+            fetch('/candidate_update.php', { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Could not toggle state: ' + (data.error || 'Unknown error'));
+                        elBtnTogglePause.disabled = false;
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('An error occurred.');
+                    elBtnTogglePause.disabled = false;
+                });
+        });
+    }
+
     if (elBtnChangeCv) {
         elBtnChangeCv.addEventListener('click', () => elCvInput.click());
     }
     if (elBtnUploadCv) {
         elBtnUploadCv.addEventListener('click', () => elCvInput.click());
+    }
+
+    const elBtnEditProfile = document.getElementById('btn-edit-profile');
+    const elDialogEditProfile = document.getElementById('dialog_edit_profile');
+    if (elBtnEditProfile && elDialogEditProfile) {
+        elBtnEditProfile.addEventListener('click', () => {
+            elDialogEditProfile.showModal();
+        });
     }
 
     if (elCvInput) {
@@ -540,6 +596,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const file = elCvInput.files[0];
             if (file.type !== 'application/pdf') {
                 alert('Please upload a PDF file.');
+                elCvInput.value = '';
+                return;
+            }
+            if (file.size > 1048576) {
+                alert('CV file size must not exceed 1 MB limit.');
+                elCvInput.value = '';
                 return;
             }
 

@@ -151,7 +151,7 @@ $a->body_main = function () { ?>
         <div
             style="background:white ; color: var(--brand-maroon); padding: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
             <h2 style="margin: 0; font-size: 1.5rem;">Interviewer Guide</h2>
-            <button onclick="this.closest('dialog').close();"
+            <button onclick="this.closest('dialog').close();" class="btn-icon"
                 style="background: none; border: none; font-size: 2rem; color: var(--brand-maroon); cursor: pointer; line-height: 1;">×</button>
         </div>
         <div style="padding: 2rem; color: var(--text-primary); line-height: 1.6; max-height: 70vh; overflow-y: auto;">
@@ -217,9 +217,9 @@ $a->body_main = function () { ?>
         <iframe id="cv_iframe" src="" style="width: 100%; height: calc(100% - 60px); border: none;"></iframe>
     </dialog>
 
-    <script src="/script/utilities.js"></script>
-    <script src="/script/short_polling.js"></script>
-    <script src="/script/company_dashboard.js"></script>
+    <script src="/script/utilities.js?cv=<?= date("YmdHi") ?>"></script>
+    <script src="/script/short_polling.js?cv=<?= date("YmdHi") ?>"></script>
+    <script src="/script/company_dashboard.js?cv=<?= date("YmdHi") ?>"></script>
     <script>
         short_polling(2, 'company', (data) => {
             update_dashboard(data);

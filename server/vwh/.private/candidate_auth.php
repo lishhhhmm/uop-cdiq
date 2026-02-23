@@ -12,7 +12,17 @@
  * REPLACE_WITH_YOUR_CLIENT_ID in assembler/register page with your actual Google Client ID
  */
 
-define('CANDIDATE_GOOGLE_CLIENT_ID', 'REPLACE_WITH_YOUR_CLIENT_ID');
+// Parse the root .env file to extract the Google Client ID safely
+$env_path = dirname(__DIR__, 2) . '/.env';
+$client_id = '';
+if (file_exists($env_path)) {
+    $env_content = file_get_contents($env_path);
+    if (preg_match('/^CANDIDATE_GOOGLE_CLIENT_ID=[\'"]?([^\'"\r\n]+)[\'"]?/m', $env_content, $matches)) {
+        $client_id = $matches[1];
+    }
+}
+
+define('CANDIDATE_GOOGLE_CLIENT_ID', $client_id !== '' ? $client_id : 'REPLACE_WITH_YOUR_CLIENT_ID');
 define('CANDIDATE_SESSION_KEY', 'candidate_profile');
 
 /**

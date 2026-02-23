@@ -18,8 +18,7 @@ $is_authed = false;
 $a->body_main = function () use ($is_authed) { ?>
 
     <!-- ── LOGIN SCREEN ──────────────────────────────────────────────────── -->
-    <div id="login-screen" class="superadmin-login-screen"
-        style="display: <?= $is_authed ? 'none' : 'flex' ?>;">
+    <div id="login-screen" class="superadmin-login-screen" style="display: <?= $is_authed ? 'none' : 'flex' ?>;">
         <div class="superadmin-login-card">
             <h2>🔒 Superadmin Login</h2>
             <form id="login-form" onsubmit="doLogin(event)">
@@ -38,6 +37,7 @@ $a->body_main = function () use ($is_authed) { ?>
             <button class="tab-btn active" onclick="switchTab('companies', this)">🏢 Companies</button>
             <button class="tab-btn" onclick="switchTab('candidates', this)">👤 Candidates</button>
             <button class="tab-btn" onclick="switchTab('operators', this)">👥 Operators</button>
+            <button class="tab-btn style-test-btn" onclick="switchTab('testdata', this)">🧪 Test Data</button>
             <button onclick="showChangePassword()" class="btn-secondary-sm">🔑 Password</button>
             <button onclick="doLogout()" class="btn-danger-sm">Logout</button>
         </div>
@@ -142,6 +142,37 @@ $a->body_main = function () use ($is_authed) { ?>
                         </tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- ── Test Data Tab ─────────────────────────────────────────────── -->
+        <div id="tab-testdata" style="display: none;">
+            <div
+                style="background: var(--bg-secondary); padding: 1.5rem; border-radius: var(--radius-md); border: 1px solid var(--border); max-width: 600px; margin: 0 auto;">
+                <h3 style="margin-top: 0; color: var(--brand-orange);">Generate Sandbox Data</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 2rem; font-size: 0.95rem;">
+                    Quickly populate the database with realistic mock data to test queue functionality, load times, and
+                    visual layouts.
+                    <br><strong style="color: var(--accent-danger);">Warning: Do not use on a live production
+                        instance!</strong>
+                </p>
+
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <button class="test-action-btn" onclick="generateTestData('generate_test_companies')">
+                        <span>🏢 Generate 20 Random Companies</span>
+                        <span class="test-action-sub">Mock Names & Tables</span>
+                    </button>
+
+                    <button class="test-action-btn" onclick="generateTestData('generate_test_candidates')">
+                        <span>👤 Generate 50 Random Candidates</span>
+                        <span class="test-action-sub">Full Profiles & Mock Emails</span>
+                    </button>
+
+                    <button class="test-action-btn" onclick="generateTestData('generate_test_queues')">
+                        <span>🎲 Randomly Assign Candidates to Queues</span>
+                        <span class="test-action-sub">1-4 Queues / Candidate</span>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -289,6 +320,60 @@ $a->body_main = function () use ($is_authed) { ?>
 $a->assemble(); ?>
 
 <style>
+    .superadmin-tabs .style-test-btn {
+        background: rgba(245, 158, 11, 0.1);
+        color: var(--brand-orange);
+        border: 1px solid rgba(245, 158, 11, 0.2);
+    }
+
+    .superadmin-tabs .style-test-btn.active {
+        background: linear-gradient(135deg, var(--brand-maroon) 0%, var(--brand-orange) 100%);
+        color: #fff;
+        border-color: transparent;
+    }
+
+    .test-action-btn {
+        padding: 1rem;
+        border-radius: var(--radius-md);
+        background: #f8fafc !important;
+        border: 1px solid var(--border) !important;
+        color: #1e293b !important;
+        cursor: pointer;
+        text-align: left;
+        font-size: 1rem;
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.2s;
+        box-shadow: none !important;
+    }
+
+    .test-action-btn > span:first-child {
+        color: #1e293b !important;
+    }
+
+    .test-action-btn:hover {
+        background: #e2e8f0 !important;
+        border-color: #cbd5e1 !important;
+    }
+
+    .test-action-btn:active {
+        background: linear-gradient(135deg, var(--brand-maroon) 0%, var(--brand-orange) 100%) !important;
+        border-color: transparent !important;
+    }
+
+    .test-action-btn:active > span:first-child,
+    .test-action-btn:active .test-action-sub {
+        color: #ffffff !important;
+    }
+
+    .test-action-sub {
+        font-size: 0.85rem;
+        color: #64748b !important;
+        font-weight: 400;
+    }
+
     table tbody tr:hover {
         background: var(--bg-secondary);
     }
@@ -444,6 +529,7 @@ $a->assemble(); ?>
         document.getElementById('tab-companies').style.display = tab === 'companies' ? 'block' : 'none';
         document.getElementById('tab-candidates').style.display = tab === 'candidates' ? 'block' : 'none';
         document.getElementById('tab-operators').style.display = tab === 'operators' ? 'block' : 'none';
+        document.getElementById('tab-testdata').style.display = tab === 'testdata' ? 'block' : 'none';
 
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
@@ -787,6 +873,19 @@ $a->assemble(); ?>
         document.getElementById('pw-current').value = '';
         document.getElementById('pw-new').value = '';
         document.getElementById('dialog-password').showModal();
+    }
+
+    // ── Test Data ────────────────────────────────────────────────────────────
+    async function generateTestData(actionType) {
+        if (!confirm('Are you sure you want to generate this test data?')) return;
+
+        toast('Generating data, please wait...', false);
+        const res = await apiCall({ action: actionType });
+        if (res.ok) {
+            toast(res.message);
+        } else {
+            toast(res.error, true);
+        }
     }
 
     async function submitPassword(e) {

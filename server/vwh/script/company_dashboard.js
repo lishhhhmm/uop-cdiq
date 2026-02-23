@@ -1,6 +1,7 @@
 let calling_time_in_seconds = 0;
 let live_timer_interval = null;
 let history_expanded = false;
+let help_checked = false;
 
 function update_dashboard(data) {
     console.log("Dashboard update received:", data);
@@ -9,10 +10,15 @@ function update_dashboard(data) {
         return;
     }
 
-    // Auto-show help on every visit
-    const helpDialog = document.getElementById('dialog_info');
-    if (helpDialog && !helpDialog.hasAttribute('open')) {
-        helpDialog.showModal();
+    // Auto-show help ONLY on first login for this specific company
+    if (!help_checked && data.company_id) {
+        const storageKey = 'help_seen_company_' + data.company_id;
+        const helpDialog = document.getElementById('dialog_info');
+        if (helpDialog && !localStorage.getItem(storageKey)) {
+            helpDialog.showModal();
+            localStorage.setItem(storageKey, 'true');
+        }
+        help_checked = true;
     }
 
     calling_time_in_seconds = data.calling_time || 180;
@@ -331,16 +337,34 @@ function update_queue_list(waiting, interviewees, allInterviews, company) {
             statusText = "Paused";
             statusBg = "var(--color-status--unavailable)";
         } else if (otherActiveInterviews.length > 0) {
-            statusText = "Busy";
-            statusBg = "var(--color-status--happening)";
+            if (otherActiveInterviews.some(oi => oi.state_ === 'HAPPENING')) {
+                statusText = "In Interview";
+                statusBg = "var(--color-status--happening)";
+            } else if (otherActiveInterviews.some(oi => oi.state_ === 'CALLING')) {
+                statusText = "Being Called";
+                statusBg = "var(--color-status--calling)";
+            } else if (otherActiveInterviews.some(oi => oi.state_ === 'DECISION')) {
+                statusText = "Checking In";
+                statusBg = "var(--color-status--decision)";
+            }
         }
 
+        let avatarHtml = '';
+        if (iwee && iwee.avatar_url) {
+            avatarHtml = `<img src="${iwee.avatar_url}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 12px; border: 1px solid var(--border);">`;
+        }
+
+        let mainName = iwee ? (iwee.display_name || iwee.email) : 'Unknown';
+
         div.innerHTML = `
-            <div class="comp-queue-item__info">
-                <span class="comp-queue-item__name">
-                    ${iwee ? (iwee.display_name || iwee.email) : 'Unknown'}
-                </span>
-                <span class="comp-queue-item__meta">Position #${index + 1} • ID #${iw.id_interviewee}</span>
+            <div style="display: flex; align-items: center;">
+                ${avatarHtml}
+                <div class="comp-queue-item__info">
+                    <span class="comp-queue-item__name">
+                        ${mainName}
+                    </span>
+                    <span class="comp-queue-item__meta">Position #${index + 1} • ID #${iw.id_interviewee}</span>
+                </div>
             </div>
             <span class="comp-status-tag" style="background:${statusBg}; color:white;">${statusText}</span>
         `;
@@ -367,15 +391,22 @@ function update_history_list(completed, interviewees = []) {
         const label = iwee
             ? (iwee.display_name || iwee.email || ('Candidate #' + iw.id_interviewee))
             : ('Candidate #' + iw.id_interviewee);
-        const sub = iwee && iwee.display_name ? iwee.email : '';
 
         const div = document.createElement('div');
         div.className = 'comp-history-item';
 
+        let avatarHtml = '';
+        if (iwee && iwee.avatar_url) {
+            avatarHtml = `<img src="${iwee.avatar_url}" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 12px; border: 1px solid var(--border);">`;
+        }
+
         div.innerHTML = `
-            <div class="comp-history-item__info">
-                <span class="comp-history-item__name">${label}</span>
-                ${sub ? `<span class="comp-history-item__meta">${sub}</span>` : ''}
+            <div style="display: flex; align-items: center;">
+                ${avatarHtml}
+                <div class="comp-history-item__info">
+                    <span class="comp-history-item__name">${label}</span>
+                    <span class="comp-history-item__meta">ID #${iw.id_interviewee}</span>
+                </div>
             </div>
             <span class="comp-status-tag" style="background:var(--color-status--completed); color:white; font-size:0.6rem;">Done</span>
         `;

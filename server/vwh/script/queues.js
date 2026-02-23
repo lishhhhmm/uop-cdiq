@@ -540,11 +540,11 @@ class ElementDialogInterviewer extends Observer {
 				let iwee = interview.getInterviewee();
 
 				let element = document.createElement('p');
-				element.classList.add('candidate');
+				element.classList.add('interviewee');
 				element.textContent = iwee.getId();
 
 				if (completed === true) {
-					element.classList.add('candidate--completed');
+					element.classList.add('interviewee--completed');
 					return element;
 				}
 
@@ -553,13 +553,13 @@ class ElementDialogInterviewer extends Observer {
 
 					switch (interview.getState()) {
 						case 'CALLING':
-							add_class = 'candidate--calling';
+							add_class = 'interviewee--calling';
 							break;
 						case 'DECISION':
-							add_class = 'candidate--decision';
+							add_class = 'interviewee--decision';
 							break;
 						case 'HAPPENING':
-							add_class = 'candidate--happening';
+							add_class = 'interviewee--happening';
 							break;
 
 						default:
@@ -571,7 +571,25 @@ class ElementDialogInterviewer extends Observer {
 					return element;
 				}
 
-				element.classList.add(iwee.getAvailable() ? 'candidate--available' : 'candidate--unavailable');
+				if (iwee.getAvailable() === true) {
+					element.classList.add('interviewee--available');
+				} else {
+					let active_state = null;
+					for (let oi of interviews.getAll()) {
+						if (oi.getInterviewee() === iwee && ['CALLING', 'HAPPENING', 'DECISION'].includes(oi.getState())) {
+							active_state = oi.getState();
+							if (active_state === 'HAPPENING') break;
+						}
+					}
+
+					if (active_state) {
+						element.classList.add({
+							CALLING: 'interviewee--calling', DECISION: 'interviewee--decision', HAPPENING: 'interviewee--happening'
+						}[active_state] ?? 'interviewee--unavailable');
+					} else {
+						element.classList.add('interviewee--unavailable');
+					}
+				}
 
 				return element;
 			}

@@ -56,9 +56,9 @@ $a->body_main = function () { ?>
 		<p id="no_interviewers_message">No Interviewers in the system.</p>
 	</div>
 
-	<script src="/script/utilities.js"></script>
-	<script src="/script/short_polling.js"></script>
-	<script src="/script/queues.js"></script>
+	<script src="/script/utilities.js?cv=<?= date("YmdHi") ?>"></script>
+	<script src="/script/short_polling.js?cv=<?= date("YmdHi") ?>"></script>
+	<script src="/script/queues.js?cv=<?= date("YmdHi") ?>"></script>
 	<script>
 		// TODO move it back to 5 seconds
 		short_polling(2 /* seconds */, /* for */ 'queues', /* to retrieve */(data) => {

@@ -349,10 +349,10 @@ $a->assemble();
 
 ?>
 
-<script src="/script/utilities.js"></script>
-<script src="/script/short_polling.js"></script>
-<script src="/script/submit.js"></script>
-<script src="/script/secretary.js"></script>
+<script src="/script/utilities.js?cv=<?= date("YmdHi") ?>"></script>
+<script src="/script/short_polling.js?cv=<?= date("YmdHi") ?>"></script>
+<script src="/script/submit.js?cv=<?= date("YmdHi") ?>"></script>
+<script src="/script/secretary.js?cv=<?= date("YmdHi") ?>"></script>
 <script>
 	short_polling(2 /* seconds */, /* for */ 'secretary', /* to retrieve */(data) => {
 		update(data);

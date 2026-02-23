@@ -27,19 +27,14 @@ $db = database();
 // ─────────────────────────────────────────────────
 if ($action === 'login') {
     $google_token = trim($_POST['google_token'] ?? '');
-    $dev_mode = (CANDIDATE_GOOGLE_CLIENT_ID === 'REPLACE_WITH_YOUR_CLIENT_ID');
 
-    if ($dev_mode && $google_token === '') {
-        $google_sub = trim($_POST['dev_sub'] ?? '');
-    } else {
-        $payload = candidate_verify_google_token($google_token);
-        if ($payload === false) {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'error' => 'Invalid token']);
-            exit;
-        }
-        $google_sub = $payload['sub'] ?? '';
+    $payload = candidate_verify_google_token($google_token);
+    if ($payload === false) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => 'Invalid token']);
+        exit;
     }
+    $google_sub = $payload['sub'] ?? '';
 
     $candidate_row = $db->candidate_by_google_sub($google_sub);
 
@@ -65,42 +60,29 @@ if ($action === 'login') {
 if ($action === 'register') {
 
     $google_token = trim($_POST['google_token'] ?? '');
-    $dev_mode = (CANDIDATE_GOOGLE_CLIENT_ID === 'REPLACE_WITH_YOUR_CLIENT_ID');
 
-    if ($dev_mode && $google_token === '') {
-        // ── Dev bypass: trust posted dev_ fields (no real Google token needed) ──
-        $email = trim($_POST['dev_email'] ?? '');
-        $google_sub = trim($_POST['dev_sub'] ?? 'dev_sub_' . time());
-        $display_name = trim($_POST['dev_name'] ?? 'Dev User');
-        $avatar_url = '';
-
-        if (!candidate_is_uop_email($email)) {
-            redirect_with_error('/candidate_register.php', 'Dev mode: email must end in @go.uop.gr');
-        }
-    } else {
-        // ── Normal production path: verify Google token ──
-        if (empty($google_token)) {
-            redirect_with_error('/candidate_register.php', 'Missing Google token. Please sign in again.');
-        }
-
-        $payload = candidate_verify_google_token($google_token);
-
-        if ($payload === false) {
-            redirect_with_error('/candidate_register.php', 'Invalid or expired Google token. Please sign in again.');
-        }
-
-        $email = $payload['email'] ?? '';
-        if (!($payload['email_verified'] ?? false)) {
-            redirect_with_error('/candidate_register.php', 'Google account email is not verified.');
-        }
-        if (!candidate_is_uop_email($email)) {
-            redirect_with_error('/candidate_register.php', 'Only @go.uop.gr accounts are accepted.');
-        }
-
-        $google_sub = $payload['sub'] ?? '';
-        $display_name = $payload['name'] ?? '';
-        $avatar_url = $payload['picture'] ?? '';
+    // ── Normal production path: verify Google token ──
+    if (empty($google_token)) {
+        redirect_with_error('/candidate_register.php', 'Missing Google token. Please sign in again.');
     }
+
+    $payload = candidate_verify_google_token($google_token);
+
+    if ($payload === false) {
+        redirect_with_error('/candidate_register.php', 'Invalid or expired Google token. Please sign in again.');
+    }
+
+    $email = $payload['email'] ?? '';
+    if (!($payload['email_verified'] ?? false)) {
+        redirect_with_error('/candidate_register.php', 'Google account email is not verified.');
+    }
+    if (!candidate_is_uop_email($email)) {
+        redirect_with_error('/candidate_register.php', 'Only @go.uop.gr accounts are accepted.');
+    }
+
+    $google_sub = $payload['sub'] ?? '';
+    $display_name = $payload['name'] ?? '';
+    $avatar_url = $payload['picture'] ?? '';
 
     // Department
     $dept = trim($_POST['dept'] ?? '');
@@ -118,8 +100,15 @@ if ($action === 'register') {
         redirect_with_error('/candidate_register.php', 'Please select at least one career interest.');
     }
 
-    $companies = array_map('intval', (array) ($_POST['companies'] ?? []));
-    $cv_file = $_FILES['cv'] ?? null;
+    if ($cv_file && $cv_file['error'] !== UPLOAD_ERR_NO_FILE) {
+        if ($cv_file['size'] > 1048576) {
+            redirect_with_error('/candidate_register.php', 'CV file size must not exceed 1 MB.');
+        }
+        $mime = @mime_content_type($cv_file['tmp_name']);
+        if ($mime !== 'application/pdf') {
+            redirect_with_error('/candidate_register.php', 'Only PDF files are allowed for CV.');
+        }
+    }
 
     try {
         $request = new CandidateSelfRegister(
@@ -180,9 +169,21 @@ if ($action === 'update_cv') {
     }
 
     $cv_file = $_FILES['cv'] ?? null;
-    if (!$cv_file) {
+    if (!$cv_file || $cv_file['error'] === UPLOAD_ERR_NO_FILE) {
         header('Content-Type: application/json');
         echo json_encode(['success' => false, 'error' => 'No file uploaded']);
+        exit;
+    }
+
+    if ($cv_file['size'] > 1048576) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => 'CV file size must not exceed 1 MB']);
+        exit;
+    }
+    $mime = @mime_content_type($cv_file['tmp_name']);
+    if ($mime !== 'application/pdf') {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => 'Only PDF files are allowed for CV']);
         exit;
     }
 
@@ -220,12 +221,10 @@ if ($candidate_row === false) {
 $iwee_id = (int) $candidate_row['id'];
 $iwer_id = (int) ($_POST['interviewer_id'] ?? 0);
 
-if ($iwer_id <= 0) {
-    redirect_with_flash('/candidate_dashboard.php', 'error', 'Invalid company.');
-}
-
 if ($action === 'join') {
-
+    if ($iwer_id <= 0) {
+        redirect_with_flash('/candidate_dashboard.php', 'error', 'Invalid company.');
+    }
     $request = new CandidateJoinQueue($update_id, $iwee_id, $iwer_id);
     $result = $db->update_handle($request);
 
@@ -236,7 +235,9 @@ if ($action === 'join') {
     }
 
 } elseif ($action === 'leave') {
-
+    if ($iwer_id <= 0) {
+        redirect_with_flash('/candidate_dashboard.php', 'error', 'Invalid company.');
+    }
     $request = new CandidateLeaveQueue($update_id, $iwee_id, $iwer_id);
     $result = $db->update_handle($request);
 
@@ -244,6 +245,46 @@ if ($action === 'join') {
         redirect_with_flash('/candidate_dashboard.php', 'success', 'You have left the queue.');
     } else {
         redirect_with_flash('/candidate_dashboard.php', 'error', 'Could not leave queue: ' . $result);
+    }
+
+} elseif ($action === 'toggle_pause') {
+
+    $request = new CandidateToggleActiveState($update_id, $iwee_id);
+    $result = $db->update_handle($request);
+
+    // It's requested via JS fetch so return JSON
+    header('Content-Type: application/json');
+    if ($result === true) {
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'error' => $result]);
+    }
+    exit;
+
+} elseif ($action === 'update_profile') {
+
+    $dept = trim($_POST['dept'] ?? '');
+    if ($dept === 'Other') {
+        $dept = trim($_POST['other_dept'] ?? '');
+    }
+    if (empty($dept)) {
+        redirect_with_error('/candidate_dashboard.php', 'Please select your department.');
+    }
+
+    $masters = trim($_POST['masters'] ?? '');
+    $interests = implode(',', array_map('trim', (array) ($_POST['interests'] ?? [])));
+
+    if (empty($interests)) {
+        redirect_with_error('/candidate_dashboard.php', 'Please select at least one career interest.');
+    }
+
+    $request = new CandidateUpdateProfile($update_id, $iwee_id, $dept, $masters, $interests);
+    $result = $db->update_handle($request);
+
+    if ($result === true) {
+        redirect_with_flash('/candidate_dashboard.php', 'success', 'Profile updated successfully.');
+    } else {
+        redirect_with_flash('/candidate_dashboard.php', 'error', 'Could not update profile: ' . $result);
     }
 
 } else {

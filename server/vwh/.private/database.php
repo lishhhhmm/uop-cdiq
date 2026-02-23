@@ -239,7 +239,47 @@ class SecretaryActiveInactiveFlipInterviewee extends UpdateRequest
 	}
 
 }
-;
+
+class CandidateToggleActiveState extends UpdateRequest
+{
+	private int $interviewee_id;
+
+	public function __construct(int $update_id_known, int $interviewee_id)
+	{
+		parent::__construct($update_id_known);
+		$this->interviewee_id = $interviewee_id;
+	}
+
+	protected function process(PDO $pdo): void
+	{
+		$statement = $pdo->query("UPDATE interviewee
+			SET
+				active = NOT active
+			WHERE
+				id = {$this->interviewee_id}
+			RETURNING active;
+		");
+
+		if ($statement === false) {
+			throw new Exception("failed to execute query");
+		}
+
+		if ($statement->fetch()['active'] === false) {
+			$statement = $pdo->query("UPDATE interview
+				SET
+					state_ = 'ENQUEUED',
+					state_timestamp = CURRENT_TIMESTAMP
+				WHERE
+					id_interviewee = {$this->interviewee_id}
+					AND state_ IN ('CALLING', 'DECISION', 'HAPPENING');
+			");
+
+			if ($statement === false) {
+				throw new Exception("failed to execute query");
+			}
+		}
+	}
+}
 
 class SecretaryAddInterviewer extends UpdateRequest
 {
@@ -287,6 +327,10 @@ class SecretaryAddInterviewer extends UpdateRequest
 		if ($iwer_image_file !== null && $iwer_image_file['error'] !== UPLOAD_ERR_NO_FILE) {
 			if ($iwer_image_file['error'] !== UPLOAD_ERR_OK) {
 				throw new InvalidArgumentException("invalid image provided, probably too big (error code " . $iwer_image_file['error'] . ")");
+			}
+
+			if ($iwer_image_file['size'] > 5 * 1024 * 1024) {
+				throw new InvalidArgumentException("invalid image provided, file size exceeds 5MB limit");
 			}
 
 			$this->iwer_image_resource_url = $url = SecretaryAddInterviewer::$iwer_image_resource_url_base . uniqid("i");
@@ -792,6 +836,7 @@ class CandidateSelfRegister extends UpdateRequest
 	private readonly string $interests; // comma-separated
 	private readonly ?string $cv_resource_url;
 	private readonly array $interviewer_ids; // companies to enqueue
+	private readonly ?array $cv_file_tmp;
 
 	public function __construct(
 		int $update_id_known,
@@ -820,22 +865,23 @@ class CandidateSelfRegister extends UpdateRequest
 		$this->interests = trim($interests);
 		$this->interviewer_ids = array_map('intval', $interviewer_ids);
 
+		$this->cv_resource_url = null;
+		$this->cv_file_tmp = null;
+
 		if ($cv_file !== null && ($cv_file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
 			if ($cv_file['type'] !== 'application/pdf') {
 				throw new InvalidArgumentException('CV must be a PDF file');
 			}
-			$url = self::$cv_base . uniqid('cv_') . '.pdf';
-			if (!move_uploaded_file($cv_file['tmp_name'], $_SERVER['DOCUMENT_ROOT'] . $url)) {
-				throw new Exception('unable to store CV file');
-			}
-			$this->cv_resource_url = $url;
-		} else {
-			$this->cv_resource_url = null;
+			$this->cv_file_tmp = $cv_file;
 		}
 	}
 
 	protected function process(PDO $pdo): void
 	{
+		if (count($this->interviewer_ids) > 5) {
+			throw new UpdateHandleExpectedException('You can only join up to 5 company queues at the same time. Please unselect some companies.');
+		}
+
 		// 1. Upsert interviewee (creates if new, updates profile if existing)
 		$cv_sql = $this->cv_resource_url !== null
 			? "'{$this->cv_resource_url}'"
@@ -871,6 +917,18 @@ class CandidateSelfRegister extends UpdateRequest
 		}
 
 		$iwee_id = (int) $stmt->fetch()['id'];
+
+		if ($this->cv_file_tmp !== null) {
+			$url = self::$cv_base . 'cv_' . $iwee_id . '.pdf';
+			if (!move_uploaded_file($this->cv_file_tmp['tmp_name'], $_SERVER['DOCUMENT_ROOT'] . $url)) {
+				throw new Exception('unable to store CV file');
+			}
+
+			// Update the record with the URL now that it's moved
+			if ($pdo->query("UPDATE interviewee SET cv_resource_url = '{$url}' WHERE id = {$iwee_id}") === false) {
+				throw new Exception('failed to set cv_resource_url');
+			}
+		}
 
 		// 2. Enqueue for selected companies (same logic as SecretaryEnqueueDequeue)
 		$ts = $pdo->query('SELECT NOW();')->fetch()['now'];
@@ -942,7 +1000,7 @@ class CandidateUpdateCV extends UpdateRequest
 			throw new InvalidArgumentException('CV must be a PDF file');
 		}
 
-		$url = self::$cv_base . uniqid('cv_') . '.pdf';
+		$url = self::$cv_base . 'cv_' . $iwee_id . '.pdf';
 		if (!move_uploaded_file($cv_file['tmp_name'], $_SERVER['DOCUMENT_ROOT'] . $url)) {
 			throw new Exception('unable to store CV file');
 		}
@@ -951,6 +1009,11 @@ class CandidateUpdateCV extends UpdateRequest
 
 	protected function process(PDO $pdo): void
 	{
+		// Fetch the old CV URL
+		$stmt_old = $pdo->prepare("SELECT cv_resource_url FROM interviewee WHERE id = :id");
+		$stmt_old->execute([':id' => $this->iwee_id]);
+		$old_cv = $stmt_old->fetchColumn();
+
 		// Update the CV URL in the database
 		$stmt = $pdo->prepare("UPDATE interviewee SET cv_resource_url = :cv WHERE id = :id");
 		$stmt->bindValue(':cv', $this->cv_resource_url);
@@ -958,6 +1021,11 @@ class CandidateUpdateCV extends UpdateRequest
 
 		if ($stmt->execute() === false) {
 			throw new Exception('failed to update CV resource URL');
+		}
+
+		// If successful, delete the old file
+		if ($old_cv && file_exists($_SERVER['DOCUMENT_ROOT'] . $old_cv)) {
+			unlink($_SERVER['DOCUMENT_ROOT'] . $old_cv);
 		}
 	}
 
@@ -1027,6 +1095,11 @@ class CandidateJoinQueue extends UpdateRequest
 
 	protected function process(PDO $pdo): void
 	{
+		$stmt_count = $pdo->query("SELECT COUNT(*) FROM interview WHERE id_interviewee = {$this->iwee_id} AND state_ = 'ENQUEUED'");
+		if ($stmt_count && $stmt_count->fetchColumn() >= 5) {
+			throw new UpdateHandleExpectedException('You can only join up to 5 company queues at the same time. Please complete or leave an existing queue first.');
+		}
+
 		$ts = $pdo->query('SELECT NOW();')->fetch()['now'];
 		$stmt = $pdo->query(
 			"INSERT INTO interview (id_interviewer, id_interviewee, state_, state_timestamp)
@@ -1040,6 +1113,48 @@ class CandidateJoinQueue extends UpdateRequest
 
 }
 
+/**
+ * Candidate updates their profile fields (department, masters, interests).
+ */
+class CandidateUpdateProfile extends UpdateRequest
+{
+	private readonly int $iwee_id;
+	private readonly string $department;
+	private readonly string $masters;
+	private readonly string $interests;
+
+	public function __construct(
+		int $update_id_known,
+		int $iwee_id,
+		string $department,
+		string $masters,
+		string $interests
+	) {
+		parent::__construct($update_id_known);
+		$this->iwee_id = $iwee_id;
+		$this->department = $department;
+		$this->masters = $masters;
+		$this->interests = $interests;
+	}
+
+	protected function process(PDO $pdo): void
+	{
+		$stmt = $pdo->prepare("UPDATE interviewee 
+			SET department = :dept,
+			    masters = :masters,
+			    interests = :ints
+			WHERE id = :id");
+
+		$stmt->bindValue(':dept', $this->department);
+		$stmt->bindValue(':masters', $this->masters);
+		$stmt->bindValue(':ints', $this->interests);
+		$stmt->bindValue(':id', $this->iwee_id, PDO::PARAM_INT);
+
+		if ($stmt->execute() === false) {
+			throw new Exception('failed to execute profile update query');
+		}
+	}
+}
 
 class Postgres implements Database, DatabaseAdmin, DatabaseJobPositions
 {
@@ -1130,7 +1245,7 @@ class Postgres implements Database, DatabaseAdmin, DatabaseJobPositions
 	public function company_still_alive(int $interviewer_id): bool
 	{
 		return $this->connect(true, function () use ($interviewer_id) {
-			$statement = $this->pdo->prepare("SELECT 1 FROM interviewer WHERE id = :id AND token_expires_at > CURRENT_TIMESTAMP");
+			$statement = $this->pdo->prepare("SELECT 1 FROM interviewer WHERE id = :id");
 			$statement->bindParam(':id', $interviewer_id, PDO::PARAM_INT);
 			$statement->execute();
 			return (bool) $statement->fetch();

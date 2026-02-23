@@ -29,6 +29,9 @@ class Assembler
 			<p>This page has no content yet.</p><?php };
 
 		if (session_status() === PHP_SESSION_NONE) {
+			// Ensure sessions last for the duration of the event (30 days)
+			ini_set('session.gc_maxlifetime', 86400 * 30);
+			ini_set('session.cookie_lifetime', 86400 * 30);
 			session_start();
 		}
 	}

@@ -19,8 +19,6 @@ $dash = $db->candidate_dashboard_view(0);
 $update_id       = $dash['update']      ?? 0;
 $all_interviewers = $dash['interviewers'] ?? [];
 
-$dev_mode = (CANDIDATE_GOOGLE_CLIENT_ID === 'REPLACE_WITH_YOUR_CLIENT_ID');
-
 // Flash message (e.g. after a failed registration attempt)
 $flash = $_SESSION['candidate_flash'] ?? null;
 unset($_SESSION['candidate_flash']);
@@ -28,7 +26,7 @@ unset($_SESSION['candidate_flash']);
 $a = new Assembler('Register');
 $a->body_header_title_override = ''; // suppress default h1 — page has its own header
 
-$a->body_main = function () use ($all_interviewers, $update_id, $dev_mode, $flash) { ?>
+$a->body_main = function () use ($all_interviewers, $update_id, $flash) { ?>
 
 <main class="candidate-page">
     <div class="candidate-page-inner">
@@ -39,7 +37,7 @@ $a->body_main = function () use ($all_interviewers, $update_id, $dev_mode, $flas
             <p class="subtitle">Reserve your spot in company interview queues — even before the day starts.</p>
         </div>
 
-        <!-- ── Flash message (errors from failed registration) ── -->
+        <!-- ── Flash message (e.g. after a failed registration attempt) ── -->
         <?php if ($flash): ?>
         <div class="form-flash form-flash--<?= $flash['type'] === 'error' ? 'error' : 'success' ?> animate-fade-in">
             <?= htmlspecialchars($flash['message']) ?>
@@ -72,26 +70,6 @@ $a->body_main = function () use ($all_interviewers, $update_id, $dev_mode, $flas
                 Students without a UoP Google account should visit the Secretary desk.
             </p>
 
-            <?php if ($dev_mode): ?>
-            <!-- ─── DEV MODE BYPASS (visible only when Google Client ID is not configured) ─── -->
-            <div style="border: 2px dashed #f59e0b; border-radius: 10px; padding: 1rem 1.25rem; background: rgba(245,158,11,0.06); margin-bottom: 1.25rem;">
-                <p style="font-weight:700; color:#92400e; margin-bottom:0.5rem;">⚠️ Dev Mode — Google Sign-In not configured</p>
-                <p style="font-size:0.85rem; color:#92400e; margin-bottom:0.85rem;">
-                    Set <code>CANDIDATE_GOOGLE_CLIENT_ID</code> in <code>candidate_auth.php</code> to enable real Google Sign-In.
-                    For now, use the form below to test with a fake profile.
-                </p>
-                <div style="display:flex; flex-direction:column; gap:0.5rem;">
-                    <input type="text"  id="dev-name"   placeholder="Full name (e.g. Test Student)"
-                           style="padding:0.55rem 0.75rem; border-radius:7px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); font-size:0.875rem;" value="Test Student">
-                    <input type="email" id="dev-email"  placeholder="@go.uop.gr email"
-                           style="padding:0.55rem 0.75rem; border-radius:7px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); font-size:0.875rem;" value="test@go.uop.gr">
-                    <input type="hidden" id="dev-sub"   value="dev_sub_12345">
-                    <button onclick="activateDevMode()" type="button" class="queue-btn queue-btn--join" style="width:fit-content; padding:0.55rem 1.2rem; border-radius:8px;">
-                        Use Dev Profile →
-                    </button>
-                </div>
-            </div>
-            <?php else: ?>
             <!-- ─── REAL GOOGLE SIGN-IN ─── -->
             <div id="g_id_onload"
                 data-client_id="<?= CANDIDATE_GOOGLE_CLIENT_ID ?>"
@@ -106,7 +84,6 @@ $a->body_main = function () use ($all_interviewers, $update_id, $dev_mode, $flas
                 data-size="large"
                 data-logo_alignment="left">
             </div>
-            <?php endif; ?>
 
             <div id="signin-error" class="form-error" style="display:none; margin-top:0.75rem;"></div>
 
@@ -123,10 +100,6 @@ $a->body_main = function () use ($all_interviewers, $update_id, $dev_mode, $flas
             <input type="hidden" name="action"      value="register">
             <input type="hidden" name="update_id"   value="<?= $update_id ?>">
             <input type="hidden" name="google_token" id="google_token_field" value="">
-            <!-- dev-only fields (ignored when real token is present) -->
-            <input type="hidden" name="dev_name"    id="dev_name_field"  value="">
-            <input type="hidden" name="dev_email"   id="dev_email_field" value="">
-            <input type="hidden" name="dev_sub"     id="dev_sub_field"   value="">
 
             <!-- Profile preview -->
             <div class="user-info" id="user-info-preview">
@@ -231,9 +204,7 @@ $a->body_main = function () use ($all_interviewers, $update_id, $dev_mode, $flas
     </div>
 </main>
 
-<?php if (!$dev_mode): ?>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<?php endif; ?>
 <script>
 function toggleOtherDept(val) {
     document.getElementById('other-dept-group').style.display = (val === 'Other') ? 'block' : 'none';
@@ -254,32 +225,13 @@ function handleGoogleSignIn(response) {
     }
 
     // Check if already registered and auto-login
-    checkRegisteredAndRedirect(token, null);
+    checkRegisteredAndRedirect(token);
 }
 
-// ── Dev mode bypass ──
-function activateDevMode() {
-    const name  = document.getElementById('dev-name').value.trim()  || 'Dev User';
-    const email = document.getElementById('dev-email').value.trim() || 'dev@go.uop.gr';
-    const sub   = document.getElementById('dev-sub').value;
-
-    if (!email.endsWith('@go.uop.gr')) {
-        alert('Dev mode still requires an @go.uop.gr email (for the server-side domain check to pass).');
-        return;
-    }
-
-    checkRegisteredAndRedirect(null, { name, email, sub });
-}
-
-function checkRegisteredAndRedirect(token, devProfile) {
+function checkRegisteredAndRedirect(token) {
     const formData = new FormData();
     formData.append('action', 'login');
-    if (token) formData.append('google_token', token);
-    if (devProfile) {
-        formData.append('dev_name', devProfile.name);
-        formData.append('dev_email', devProfile.email);
-        formData.append('dev_sub', devProfile.sub);
-    }
+    formData.append('google_token', token);
 
     const btn = document.getElementById('reg-submit-btn'); // Use button as loading indicator if needed
     
@@ -344,6 +296,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const interests = form.querySelectorAll('input[name="interests[]"]:checked');
         const token     = document.getElementById('google_token_field').value;
         const devSub    = document.getElementById('dev_sub_field').value;
+        const cvInput   = document.getElementById('cv');
 
         document.getElementById('reg-error').style.display = 'none';
 
@@ -353,6 +306,18 @@ document.addEventListener('DOMContentLoaded', function () {
             showErr('Please specify your department.'); e.preventDefault(); return;
         }
         if (interests.length === 0) { showErr('Please select at least one career interest.'); e.preventDefault(); return; }
+
+        if (cvInput && cvInput.files.length > 0) {
+            const file = cvInput.files[0];
+            if (file.type !== 'application/pdf') {
+                showErr('Only PDF files are allowed for CV.');
+                e.preventDefault(); return;
+            }
+            if (file.size > 1048576) {
+                showErr('CV file size must not exceed 1 MB limit.');
+                e.preventDefault(); return;
+            }
+        }
 
         document.getElementById('reg-submit-btn').disabled    = true;
         document.getElementById('reg-submit-btn').textContent = 'Registering…';

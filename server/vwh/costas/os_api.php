@@ -440,6 +440,134 @@ try {
             echo json_encode(['ok' => true]);
             break;
 
+        // ── Generate Test Companies ──────────────────────────────────────
+        case 'generate_test_companies':
+            $company_names = [
+                'AlphaTech Solutions',
+                'BetaData Analytics',
+                'Nexus CyberLabs',
+                'Quantum Innovations',
+                'Pioneer Systems',
+                'Vanguard Networks',
+                'Horizon Cloud',
+                'Titan Software',
+                'Echo Robotics',
+                'Omega Financial Services',
+                'Apex Strategies',
+                'Meridian Media',
+                'Summit Engineering',
+                'Crest Logistics',
+                'Zenith Healthcare',
+                'Aura Consulting',
+                'Pulse Electronics',
+                'Orbit Telecomm',
+                'Stellar Aerospace',
+                'Nova BioTech'
+            ];
+
+            shuffle($company_names);
+            $names_to_add = array_slice($company_names, 0, 20); // 20 companies
+
+            $update_id = $db->update_happened_recent();
+            foreach ($names_to_add as $i => $name) {
+                // Table numbers 1 to 20
+                $table = (string) ($i + 1);
+                $req = new SecretaryAddInterviewer($update_id, $name, $table, null);
+                if ($db->update_handle($req) !== true)
+                    throw new Exception("Failed to add company $name");
+            }
+
+            echo json_encode(['ok' => true, 'message' => 'Generated 20 companies']);
+            break;
+
+        // ── Generate Test Candidates ─────────────────────────────────────
+        case 'generate_test_candidates':
+            $first_names = ['Giorgos', 'Maria', 'Dimitris', 'Eleni', 'Giannis', 'Anna', 'Kostas', 'Katerina', 'Nikos', 'Vasiliki', 'Panagiotis', 'Sofia', 'Michalis', 'Angeliki', 'Christos'];
+            $last_names = ['Papadopoulos', 'Georgiou', 'Dimitriou', 'Karagiannis', 'Mylonas', 'Konstantinou', 'Nikolaou', 'Antoniou', 'Makris', 'Galanis'];
+            $departments = ['Computer Engineering', 'Informatics', 'Business Admin', 'Economics', 'Telecommunications'];
+
+            $update_id = $db->update_happened_recent();
+            $request = new class ($update_id, $first_names, $last_names, $departments) extends UpdateRequest {
+                private array $first;
+                private array $last;
+                private array $depts;
+
+                public function __construct(int $uid, array $f, array $l, array $d)
+                {
+                    parent::__construct($uid);
+                    $this->first = $f;
+                    $this->last = $l;
+                    $this->depts = $d;
+                }
+
+                protected function process(PDO $pdo): void
+                {
+                    $values = [];
+                    for ($i = 0; $i < 50; $i++) {
+                        $f = $this->first[array_rand($this->first)];
+                        $l = $this->last[array_rand($this->last)];
+                        $d = $this->depts[array_rand($this->depts)];
+
+                        $email = strtolower(substr($f, 0, 1) . $l . rand(10, 999) . '@go.uop.gr');
+                        $name = $f . ' ' . $l;
+                        $sub = 'test_sub_' . uniqid();
+                        $masters = rand(0, 1) ? 'Yes' : 'No';
+                        $interests = 'Software Development, AI';
+
+                        $values[] = "('{$email}', '{$sub}', '{$name}', '{$d}', '{$masters}', '{$interests}', true, true)";
+                    }
+
+                    $sql = "INSERT INTO interviewee (email, google_sub, display_name, department, masters, interests, active, available) VALUES " . implode(', ', $values) . " ON CONFLICT DO NOTHING;";
+                    if ($pdo->query($sql) === false)
+                        throw new Exception('Failed to insert test candidates');
+                }
+            };
+
+            if ($db->update_handle($request) !== true)
+                throw new Exception('Generation failed');
+
+            echo json_encode(['ok' => true, 'message' => 'Generated 50 candidates thoroughly']);
+            break;
+
+        // ── Generate Test Queues ─────────────────────────────────────────
+        case 'generate_test_queues':
+            $update_id = $db->update_happened_recent();
+            $request = new class ($update_id) extends UpdateRequest {
+                protected function process(PDO $pdo): void
+                {
+                    $iwers = $pdo->query("SELECT id FROM interviewer")->fetchAll(PDO::FETCH_COLUMN);
+                    $iwees = $pdo->query("SELECT id FROM interviewee")->fetchAll(PDO::FETCH_COLUMN);
+
+                    if (empty($iwers) || empty($iwees))
+                        throw new Exception("Need both companies and candidates to generate queues");
+
+                    $values = [];
+                    $ts = $pdo->query('SELECT NOW();')->fetch()['now'];
+
+                    foreach ($iwees as $uid) {
+                        // Drop each user into 1 to 4 random queues
+                        $queue_count = rand(1, 4);
+                        $chosen_iwers = (array) array_rand(array_flip($iwers), $queue_count);
+
+                        foreach ($chosen_iwers as $cid) {
+                            $values[] = "({$cid}, {$uid}, 'ENQUEUED', '{$ts}')";
+                        }
+                    }
+
+                    $insert = "INSERT INTO interview (id_interviewer, id_interviewee, state_, state_timestamp)
+                            VALUES " . implode(', ', $values) . "
+                            ON CONFLICT ON CONSTRAINT pair_interviewer_interviewee DO NOTHING;";
+
+                    if ($pdo->query($insert) === false)
+                        throw new Exception('Failed to enqueue test candidates');
+                }
+            };
+            if ($db->update_handle($request) !== true)
+                throw new Exception('Test Queue generation failed');
+
+            echo json_encode(['ok' => true, 'message' => 'Random queues populated!']);
+            break;
+
         // ── Change Password ──────────────────────────────────────────────
         case 'change_password':
             $current = $_POST['current_password'] ?? '';

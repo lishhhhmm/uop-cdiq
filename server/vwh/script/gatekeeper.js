@@ -29,6 +29,26 @@ let all_interviews_data = []; // Store all interviews for queue display
 let current_interview_happening = false; // Track if interview is happening for pause logic
 
 const interviewers = {};
+const interviewees = {};
+
+function getCandidateExactStateClass(iwee_id) {
+    let active_int = all_interviews_data.find(row =>
+        row['id_interviewee'] == iwee_id &&
+        ['CALLING', 'HAPPENING', 'DECISION'].includes(row['state_'])
+    );
+
+    if (active_int) {
+        if (active_int['state_'] === 'CALLING') return 'interviewee--calling';
+        if (active_int['state_'] === 'HAPPENING') return 'interviewee--happening';
+        if (active_int['state_'] === 'DECISION') return 'interviewee--decision';
+    }
+
+    let iwee = interviewees[iwee_id];
+    if (iwee && iwee.available === false) {
+        return 'interviewee--unavailable';
+    }
+    return 'interviewee--available';
+}
 
 class Interview {
 
@@ -431,7 +451,7 @@ function interviewer_element_dialog_form_preperation(iwer) {
     );
 
     if (queue.length > 0) {
-        dialog_queue_list.innerHTML = queue.map(row => '<span class="called-number">' + row['id_interviewee'] + '</span>').join(' ');
+        dialog_queue_list.innerHTML = queue.map(row => '<span class="called-number ' + getCandidateExactStateClass(row['id_interviewee']) + '">' + row['id_interviewee'] + '</span>').join(' ');
     } else {
         dialog_queue_list.innerHTML = '<span style="color: var(--text-secondary); opacity: 0.7;">No one waiting</span>';
     }
@@ -494,7 +514,7 @@ function update(data) {
     all_interviews_data = data['all_interviews'] || []; // Use all_interviews for queue display
 
     update_interviewers(data['interviewers']);
-    // update_interviewees(data['interviewees']); // non utilized
+    update_interviewees(data['interviewees']);
     update_interviews(data['interviews']);
 
     if (interviewers[form_input_interviewer_id.value] !== undefined) {
@@ -549,6 +569,13 @@ function update_interviewers(rows) {
                 e.get().parentElement.removeChild(e.get());
             }
         });
+    });
+}
+
+function update_interviewees(rows) {
+    if (!rows) return;
+    rows.forEach(row => {
+        interviewees[row['id']] = { available: row['available'] };
     });
 }
 

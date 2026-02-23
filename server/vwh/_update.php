@@ -115,7 +115,7 @@ $parameters = [
 						$unauthorized = false;
 
 						if (
-							isset($_POST['form_button_update'])
+							(isset($_POST['form_button_update']) || isset($_POST['form_button_update_top']))
 							&& isset($_POST['iwee_select']) && $_POST['iwee_select'] === 'null'
 							&& isset($_POST['iwee_filter']) && $_POST['iwee_filter'] !== ''
 						) {
@@ -162,7 +162,7 @@ $parameters = [
 								intval($_POST['iwer_info_dialog_id'])
 							);
 						} else if (
-							isset($_POST['form_button_update'])
+							(isset($_POST['form_button_update']) || isset($_POST['form_button_update_top']))
 							&& isset($_POST['iwee_select']) && $_POST['iwee_select'] !== 'null'
 						) {
 							$update_request = new SecretaryEnqueueDequeue(

@@ -99,7 +99,9 @@ transition: all var(--transition-normal);
 box-shadow: var(--shadow-sm);
 }
 
-.btn-gradient, .btn-primary, button:not(.btn-secondary):not(.btn-secondary-sm):not(.btn-outline):not(.tab-btn):not(.btn-action) {
+.btn-gradient, .btn-primary,
+button:not(.btn-secondary):not(.btn-secondary-sm):not(.btn-outline):not(.btn-outline-sm):not(.tab-btn):not(.btn-action):not(.btn-icon)
+{
 color: #ffffff !important;
 }
 
@@ -714,6 +716,12 @@ color: var(--color-status--happening);
 & > .interviewee--completed {
 color: var(--color-status--completed);
 }
+
+&.interviewee--self {
+text-decoration: underline;
+text-underline-offset: 4px;
+text-decoration-thickness: 3px;
+}
 }
 }
 }
@@ -1041,6 +1049,22 @@ display: flex;
 justify-content: space-between;
 align-items: center;
 width: 100%;
+}
+
+.header-left {
+display: flex;
+align-items: center;
+gap: 1.5rem;
+}
+
+/* ── Global Candidate Status Colors ── */
+.interviewee--unavailable { color: var(--color-status--unavailable) !important; }
+.interviewee--available { color: var(--color-status--available) !important; }
+.interviewee--calling { color: var(--color-status--calling) !important; }
+.interviewee--decision { color: var(--color-status--decision) !important; }
+.interviewee--happening { color: var(--color-status--happening) !important; }
+.interviewee--completed { color: var(--color-status--completed) !important; }
+.interviewee--self { text-decoration: underline !important; text-underline-offset: 4px; text-decoration-thickness: 3px;
 }
 
 .header-logos {
@@ -2500,12 +2524,12 @@ transition: all var(--transition-normal);
 }
 
 .btn-secondary-sm {
-    /* Styles inherited from global light buttons rule */
+/* Styles inherited from global light buttons rule */
 }
 
 .btn-danger-sm {
-    background: var(--accent-danger, #ef4444);
-    border-color: transparent;
+background: var(--accent-danger, #ef4444);
+border-color: transparent;
 }
 
 .btn-secondary-sm:hover {
