@@ -13,7 +13,8 @@
  */
 
 // Parse the root .env file to extract the Google Client ID safely
-$env_path = dirname(__DIR__, 2) . '/.env';
+$env_path = dirname(__DIR__, 3) . '/.env';
+
 $client_id = '';
 if (file_exists($env_path)) {
     $env_content = file_get_contents($env_path);
