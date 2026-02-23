@@ -312,15 +312,6 @@ $a->body_main = function () { ?>
 					selected</span>
 			</div>
 
-			<label for="iwer_info_dialog_token" style="display: flex; flex-direction: column; gap: 0.5rem;">
-				<span>Access Token (10 min):</span>
-				<div style="display: flex; gap: 0.5rem;">
-					<input type="text" id="iwer_info_dialog_token" name="iwer_info_dialog_token" readonly
-						placeholder="No active token">
-					<button type="submit" id="iwer_info_dialog_generate_token" name="iwer_info_dialog_generate_token"
-						style="white-space: nowrap;">Generate</button>
-				</div>
-			</label>
 
 			<button type="button" onclick="
 				window.location.href = '/costas/secretary.php?interviewer_id=' + encodeURIComponent(document.getElementById('iwer_info_dialog_id').value);

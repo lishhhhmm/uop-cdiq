@@ -171,17 +171,6 @@ $parameters = [
 								...(isset($_POST['interviewers']) ? $_POST['interviewers'] : [])
 							);
 						} else if (
-							isset($_POST['iwer_info_dialog_generate_token'])
-							&& isset($_POST['iwer_info_dialog_id']) && $_POST['iwer_info_dialog_id'] !== 'null'
-						) {
-							// Generate a random 6-digit token securely
-							$token = sprintf("%06d", random_int(0, 999999));
-							$update_request = new SecretaryGenerateInterviewerToken(
-								$update_known,
-								intval($_POST['iwer_info_dialog_id']),
-								$token
-							);
-						} else if (
 							isset($_POST['iwee_button_active_inactive'])
 							&& isset($_POST['iwee_select']) && $_POST['iwee_select'] !== 'null'
 						) {
