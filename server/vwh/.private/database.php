@@ -694,6 +694,33 @@ class GatekeeperHappeningToCompletedAndPause extends UpdateRequest
 }
 ;
 
+class SecretaryGenerateInterviewerToken extends UpdateRequest
+{
+
+	private readonly int $interviewer_id;
+	private readonly string $token;
+
+	public function __construct(int $update_id_known, int $interviewer_id, string $token)
+	{
+		parent::__construct($update_id_known);
+
+		$this->interviewer_id = $interviewer_id;
+		$this->token = $token;
+	}
+
+	protected function process(PDO $pdo): void
+	{
+		$statement = $pdo->prepare("UPDATE interviewer SET token = :token, token_expires_at = CURRENT_TIMESTAMP + INTERVAL '10 minutes' WHERE id = :id");
+		$statement->bindValue(':token', $this->token);
+		$statement->bindValue(':id', $this->interviewer_id, PDO::PARAM_INT);
+
+		if ($statement->execute() === false) {
+			throw new Exception("failed to generate token");
+		}
+	}
+
+}
+;
 
 interface Database
 {
@@ -1732,14 +1759,17 @@ class Postgres implements Database, DatabaseAdmin, DatabaseJobPositions
 				);",
 
 				"CREATE TABLE IF NOT EXISTS interviewer /* or company */ (
-					id SERIAL PRIMARY KEY,
+				id SERIAL PRIMARY KEY,
 
-					name VARCHAR(255) NOT NULL,
-					image_resource_url VARCHAR(255) NOT NULL,
-					table_number VARCHAR(255),
+				name VARCHAR(255) NOT NULL,
+				image_resource_url VARCHAR(255) NOT NULL,
+				table_number VARCHAR(255),
 
-					active BOOLEAN NOT NULL,
-					available BOOLEAN NOT NULL
+				token VARCHAR(6),
+				token_expires_at TIMESTAMP,
+
+				active BOOLEAN NOT NULL,
+				available BOOLEAN NOT NULL
 				);",
 
 				"CREATE TABLE IF NOT EXISTS job (
@@ -1788,7 +1818,9 @@ class Postgres implements Database, DatabaseAdmin, DatabaseJobPositions
 						image_resource_url,
 						table_number,
 						active,
-						available
+						available,
+						token,
+						token_expires_at
 					FROM interviewer
 					ORDER BY name;
 				",
@@ -1816,7 +1848,9 @@ class Postgres implements Database, DatabaseAdmin, DatabaseJobPositions
 						name,
 						image_resource_url,
 						table_number,
-						active
+						active,
+						token,
+						token_expires_at
 					FROM interviewer
 					ORDER BY name;
 				",
