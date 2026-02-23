@@ -174,6 +174,14 @@ class Assembler
 		// Show candidate nav link dynamically
 		require_once $_SERVER['DOCUMENT_ROOT'] . '/.private/candidate_auth.php';
 		$_cand = candidate_session_get();
+
+		// If a company is logged in, show their dashboard button
+		if (AssemblerOperate::operator_is(Operator::Company)): ?>
+			<a href="/company_dashboard.php" class="cta-nav"
+				style="background: linear-gradient(135deg, var(--brand-green) 0%, #5d8f28 100%) !important; box-shadow: 0 4px 15px rgba(136, 197, 64, 0.3);">My
+				Dashboard</a>
+		<?php endif;
+
 		if ($_cand !== false): ?>
 			<a href="/candidate_dashboard.php" class="cta-nav">My Queues</a>
 		<?php else: ?>
