@@ -34,7 +34,7 @@ $a->body_main = function () use ($all_interviewers, $update_id, $flash) { ?>
         <!-- ── Page Header ── -->
         <div class="candidate-page-header animate-fade-in">
             <h1 class="gradient-text">Career Fair 2026 · Self Registration</h1>
-            <p class="subtitle">Reserve your spot in company interview queues — even before the day starts.</p>
+            <p class="subtitle">Reserve your spot in company interview queues.</p>
         </div>
 
         <!-- ── Flash message (e.g. after a failed registration attempt) ── -->

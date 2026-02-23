@@ -18,8 +18,9 @@ $env_path = dirname(__DIR__, 3) . '/.env';
 $client_id = '';
 if (file_exists($env_path)) {
     $env_content = file_get_contents($env_path);
-    if (preg_match('/^CANDIDATE_GOOGLE_CLIENT_ID=[\'"]?([^\'"\r\n]+)[\'"]?/m', $env_content, $matches)) {
-        $client_id = $matches[1];
+    // Relaxed regex to account for potential leading whitespace, \r, and \n
+    if (preg_match('/CANDIDATE_GOOGLE_CLIENT_ID\s*=\s*[\'"]?([^\'"\r\n]+)[\'"]?/i', $env_content, $matches)) {
+        $client_id = trim($matches[1]);
     }
 }
 
