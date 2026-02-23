@@ -64,7 +64,13 @@ if (isset($_POST['superadmin_login'])) {
             exit;
         }
         $new_hash = password_hash($password, PASSWORD_BCRYPT);
-        file_put_contents($_SERVER['DOCUMENT_ROOT'] . '/.private/.superadmin_hash', $new_hash);
+        $written = @file_put_contents($_SERVER['DOCUMENT_ROOT'] . '/.private/.superadmin_hash', $new_hash);
+
+        if ($written === false) {
+            echo json_encode(['ok' => false, 'error' => 'Could not save password. Server permission denied for /.private/ folder.']);
+            exit;
+        }
+
         $_SESSION['superadmin_auth'] = true;
         $_SESSION['superadmin_just_logged_in'] = true;
         echo json_encode(['ok' => true, 'setup' => true]);
