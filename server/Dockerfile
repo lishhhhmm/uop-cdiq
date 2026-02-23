@@ -17,6 +17,8 @@ RUN a2enmod rewrite ssl
 ARG SERVER_SSL_CERT_FILE
 ARG SERVER_SSL_PKEY_FILE
 
+RUN mkdir -p /etc/ssl_for_https
+
 COPY ./cert "$SERVER_SSL_CERT_FILE"
 COPY ./pkey "$SERVER_SSL_PKEY_FILE"
 
