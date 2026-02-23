@@ -517,15 +517,30 @@ $a->assemble(); ?>
 
     // ── Auth ─────────────────────────────────────────────────────────────────
     async function doLogin(e) {
-        e.preventDefault();
+        if (e) e.preventDefault();
+        const btn = document.querySelector('#login-form button');
+        const err = document.getElementById('login-error');
         const pw = document.getElementById('login-password').value;
-        const res = await apiCall({ superadmin_login: '1', password: pw });
-        if (res.ok) {
-            location.reload();
-        } else {
-            const err = document.getElementById('login-error');
-            err.textContent = res.error;
+
+        btn.disabled = true;
+        btn.textContent = 'Logging in...';
+        err.style.display = 'none';
+
+        try {
+            const res = await apiCall({ superadmin_login: '1', password: pw });
+            if (res.ok) {
+                location.reload();
+            } else {
+                err.textContent = res.error || 'Login failed';
+                err.style.display = 'block';
+            }
+        } catch (x) {
+            console.error(x);
+            err.textContent = 'Connection error: ' + x.message;
             err.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Login';
         }
     }
 

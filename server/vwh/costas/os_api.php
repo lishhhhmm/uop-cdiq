@@ -66,6 +66,7 @@ if (isset($_POST['superadmin_login'])) {
         $new_hash = password_hash($password, PASSWORD_BCRYPT);
         file_put_contents($_SERVER['DOCUMENT_ROOT'] . '/.private/.superadmin_hash', $new_hash);
         $_SESSION['superadmin_auth'] = true;
+        $_SESSION['superadmin_just_logged_in'] = true;
         echo json_encode(['ok' => true, 'setup' => true]);
         exit;
     }
