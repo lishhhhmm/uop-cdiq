@@ -846,7 +846,7 @@ class CandidateSelfRegister extends UpdateRequest
 		string $masters,
 		string $interests,
 		?array $cv_file,
-		array $interviewer_ids,
+		array $interviewer_ids
 	) {
 		parent::__construct($update_id_known);
 
@@ -864,13 +864,14 @@ class CandidateSelfRegister extends UpdateRequest
 		$this->interviewer_ids = array_map('intval', $interviewer_ids);
 
 		$this->cv_resource_url = null;
-		$this->cv_file_tmp = null;
 
 		if ($cv_file !== null && ($cv_file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
 			if ($cv_file['type'] !== 'application/pdf') {
 				throw new InvalidArgumentException('CV must be a PDF file');
 			}
 			$this->cv_file_tmp = $cv_file;
+		} else {
+			$this->cv_file_tmp = null;
 		}
 	}
 
