@@ -14,6 +14,19 @@ $a->custom_nav = [
 // ── SESSION ─────────────────────────────────────────────────────────────
 $is_authed = $_SESSION['superadmin_auth'] ?? false;
 
+// Stricter requirement: If we are viewing the page (GET), 
+// we must have just logged in via the API (which sets this flag).
+// This forces a login screen on every F5 / page reload.
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && $is_authed) {
+    if (empty($_SESSION['superadmin_just_logged_in'])) {
+        $is_authed = false;
+        unset($_SESSION['superadmin_auth']);
+    } else {
+        // One-time flag: consume it for this page load
+        unset($_SESSION['superadmin_just_logged_in']);
+    }
+}
+
 $a->body_main = function () use ($is_authed) { ?>
 
     <!-- ── LOGIN SCREEN ──────────────────────────────────────────────────── -->

@@ -72,6 +72,7 @@ if (isset($_POST['superadmin_login'])) {
 
     if (password_verify($password, $hash)) {
         $_SESSION['superadmin_auth'] = true;
+        $_SESSION['superadmin_just_logged_in'] = true; // Allow one GET request to os.php
         $_SESSION['superadmin_attempts'] = 0;
         $_SESSION['superadmin_lockout'] = 0;
         echo json_encode(['ok' => true]);

@@ -29,9 +29,9 @@ if ($action === 'login') {
     $google_token = trim($_POST['google_token'] ?? '');
 
     $payload = candidate_verify_google_token($google_token);
-    if ($payload === false) {
+    if (!is_array($payload)) {
         header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'error' => 'Invalid token']);
+        echo json_encode(['success' => false, 'error' => $payload]);
         exit;
     }
     $google_sub = $payload['sub'] ?? '';
@@ -68,8 +68,8 @@ if ($action === 'register') {
 
     $payload = candidate_verify_google_token($google_token);
 
-    if ($payload === false) {
-        redirect_with_error('/candidate_register.php', 'Invalid or expired Google token. Please sign in again.');
+    if (!is_array($payload)) {
+        redirect_with_error('/candidate_register.php', 'Authentication failed: ' . $payload);
     }
 
     $email = $payload['email'] ?? '';

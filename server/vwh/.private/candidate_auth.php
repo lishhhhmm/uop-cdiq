@@ -33,7 +33,7 @@ define('CANDIDATE_SESSION_KEY', 'candidate_profile');
  *   - payload['email_verified'] === true
  *   - ends_with(payload['email'], '@go.uop.gr')
  */
-function candidate_verify_google_token(string $id_token): array|false
+function candidate_verify_google_token(string $id_token): array|string
 {
     // Use Google's tokeninfo endpoint for server-side verification
     // (does not require any Google library)
@@ -43,32 +43,37 @@ function candidate_verify_google_token(string $id_token): array|false
         'http' => [
             'timeout' => 5,
             'method' => 'GET',
+            'ignore_errors' => true // So we can read Google's error JSON
         ]
     ]);
 
     $response = @file_get_contents($url, false, $ctx);
 
     if ($response === false) {
-        return false;
+        return 'Network error: Could not reach Google verification servers.';
     }
 
     $payload = json_decode($response, true);
 
     if (!is_array($payload)) {
-        return false;
+        return 'Invalid response from Google: ' . substr($response, 0, 100);
+    }
+
+    if (isset($payload['error'])) {
+        return 'Google error: ' . ($payload['error_description'] ?? $payload['error']);
     }
 
     // Must be issued for our client
     // We only enforce this when a real client ID is set
     if (CANDIDATE_GOOGLE_CLIENT_ID !== 'REPLACE_WITH_YOUR_CLIENT_ID') {
         if (($payload['aud'] ?? '') !== CANDIDATE_GOOGLE_CLIENT_ID) {
-            return false;
+            return 'Token aud mismatch. Expected: ' . CANDIDATE_GOOGLE_CLIENT_ID;
         }
     }
 
     // Token must not be expired (Google already checks this but we double-check)
     if (isset($payload['exp']) && (int) $payload['exp'] < time()) {
-        return false;
+        return 'Token expired.';
     }
 
     return $payload;
