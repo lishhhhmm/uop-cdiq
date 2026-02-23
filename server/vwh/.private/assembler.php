@@ -29,9 +29,18 @@ class Assembler
 			<p>This page has no content yet.</p><?php };
 
 		if (session_status() === PHP_SESSION_NONE) {
-			// Ensure sessions last for the duration of the event (30 days)
-			ini_set('session.gc_maxlifetime', 86400 * 30);
-			ini_set('session.cookie_lifetime', 86400 * 30);
+			$uri = $_SERVER['REQUEST_URI'] ?? '';
+			// Sensitive areas like Superadmin/Secretary/Gatekeeper should require login if tab closes
+			$is_sensitive = (strpos($uri, '/costas/') !== false || strpos($uri, '/os.php') !== false);
+
+			if ($is_sensitive) {
+				ini_set('session.gc_maxlifetime', 3600); // 1 hour idle
+				ini_set('session.cookie_lifetime', 0);   // Session-only (expires on tab close)
+			} else {
+				// Ensure sessions last for the duration of the event (30 days) for candidates
+				ini_set('session.gc_maxlifetime', 86400 * 30);
+				ini_set('session.cookie_lifetime', 86400 * 30);
+			}
 			session_start();
 		}
 	}

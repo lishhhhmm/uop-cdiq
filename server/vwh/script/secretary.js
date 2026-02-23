@@ -384,7 +384,10 @@ function update(data) {
 				iwer_info_dialog_token.value = (interviewer['token'] && !isExpired) ? interviewer['token'] : '';
 				iwer_info_dialog_token.placeholder = isExpired ? 'Expired' : 'No active token';
 
-				iwer_button_add.dispatchEvent(new Event("click"));
+				// Ensure we reset the form state for EDIT mode (hide file input placeholder or similar)
+				document.getElementById('iwer_image_filename').innerText = 'No file selected';
+
+				iwer_info_dialog.showModal();
 			});
 			display(iwee_option_empty.selected === false, [interviewer['element_input']]);
 

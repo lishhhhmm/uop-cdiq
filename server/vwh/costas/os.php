@@ -508,9 +508,7 @@ $a->assemble(); ?>
         const pw = document.getElementById('login-password').value;
         const res = await apiCall({ superadmin_login: '1', password: pw });
         if (res.ok) {
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('admin-dashboard').style.display = 'block';
-            loadCompanies();
+            location.reload();
         } else {
             const err = document.getElementById('login-error');
             err.textContent = res.error;
