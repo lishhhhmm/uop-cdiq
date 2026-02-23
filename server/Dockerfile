@@ -17,17 +17,9 @@ RUN a2enmod rewrite ssl
 ARG SERVER_SSL_CERT_FILE
 ARG SERVER_SSL_PKEY_FILE
 
-RUN mkdir -p /etc/ssl_for_https
-
-COPY ./cert "$SERVER_SSL_CERT_FILE"
-COPY ./pkey "$SERVER_SSL_PKEY_FILE"
-
-# ---
 # Copy the Apache configuration file and enable the site
 COPY ./conf /etc/apache2/sites-available/000-default.conf
-RUN echo "Listen 443" >> /etc/apache2/ports.conf \
-    && a2ensite 000-default \
-    && a2dissite default-ssl
+RUN a2ensite 000-default && a2dissite default-ssl
 
 CMD chown -R www-data:www-data /var/www/html/resources/images/interviewer /var/www/html/resources/cv \
     && apache2-foreground
