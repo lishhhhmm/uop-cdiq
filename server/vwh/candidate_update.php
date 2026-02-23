@@ -100,6 +100,9 @@ if ($action === 'register') {
         redirect_with_error('/candidate_register.php', 'Please select at least one career interest.');
     }
 
+    $cv_file = $_FILES['cv'] ?? null;
+    $companies = $_POST['companies'] ?? [];
+
     if ($cv_file && $cv_file['error'] !== UPLOAD_ERR_NO_FILE) {
         if ($cv_file['size'] > 1048576) {
             redirect_with_error('/candidate_register.php', 'CV file size must not exceed 1 MB.');
