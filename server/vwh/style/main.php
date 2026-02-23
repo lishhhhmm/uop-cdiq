@@ -1049,6 +1049,7 @@ display: flex;
 justify-content: space-between;
 align-items: center;
 width: 100%;
+position: relative; /* Anchor for absolute mobile menu */
 }
 
 .header-left {
@@ -1234,23 +1235,29 @@ display: flex;
 }
 
 .nav-links {
-position: fixed;
-top: 70px; /* Below glass nav */
+position: absolute;
+top: calc(100% + 15px); /* Below the glass pill */
 left: 0;
 right: 0;
-background: rgba(255, 255, 255, 0.95);
+background: rgba(255, 255, 255, 0.98);
 backdrop-filter: blur(15px);
 flex-direction: column;
 padding: 1.5rem;
 gap: 1rem;
-transform: translateY(-150%);
-transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-border-bottom: 1px solid var(--border-glass);
-box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+opacity: 0;
+visibility: hidden;
+transform: translateY(-10px);
+transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+border: 1px solid var(--border-glass);
+border-radius: 1.5rem;
+box-shadow: 0 15px 35px rgba(0,0,0,0.15);
 width: 100%;
+z-index: 999;
 }
 
 .nav-links.open {
+opacity: 1;
+visibility: visible;
 transform: translateY(0);
 }
 
@@ -1260,6 +1267,22 @@ font-size: 1rem;
 
 .nav-logo {
 height: 28px;
+}
+}
+
+@media (max-width: 480px) {
+.header-logos {
+gap: 0.5rem;
+}
+.header-logos h2 {
+font-size: 0.85rem;
+}
+.nav-logo {
+height: 22px;
+}
+.glass-nav {
+padding: 0.6rem 1rem;
+border-radius: 2rem;
 }
 }
 
