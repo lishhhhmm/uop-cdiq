@@ -25,7 +25,9 @@ COPY ./pkey "$SERVER_SSL_PKEY_FILE"
 # ---
 # Copy the Apache configuration file and enable the site
 COPY ./conf /etc/apache2/sites-available/000-default.conf
-RUN a2ensite 000-default && a2dissite default-ssl
+RUN echo "Listen 443" >> /etc/apache2/ports.conf \
+    && a2ensite 000-default \
+    && a2dissite default-ssl
 
 CMD chown -R www-data:www-data /var/www/html/resources/images/interviewer /var/www/html/resources/cv \
     && apache2-foreground
