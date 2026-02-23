@@ -6,6 +6,7 @@ services:
     environment:
       POSTGRES_USER: "${DBMS_USERNAME}"
       POSTGRES_PASSWORD: "${DBMS_PASSWORD}"
+      POSTGRES_DB: "${DBMS_DATABASE}"
     volumes:
       - ./dbms/vlpd:/var/lib/postgresql/data
     restart: unless-stopped
@@ -31,9 +32,8 @@ services:
       SERVER_SSL_CERT_FILE: "${SERVER_SSL_CERT_FILE}"
       SERVER_SSL_PKEY_FILE: "${SERVER_SSL_PKEY_FILE}"
     volumes:
-       - ./server/vwh:/var/www/html/
+      - ./server/vwh:/var/www/html/
     restart: unless-stopped
-
   # Suggestions API - commented out due to heavy PyTorch/CUDA dependencies (~2GB)
   # api:
   #   build:

@@ -11,33 +11,74 @@ A premium, real-time interview management platform designed for the 2026 Career 
     - Secure password hashing (BCRYPT) and elimination of insecure setup scripts.
     - CLI-only initialization for maximum backend safety.
 
----
-
 ## 🏗️ Deployment Guide
 
-### 1. Environment & SSL Setup
-1. **Configure Environment**: Create a `.env` file in the root directory (see `config.php` for vars).
-2. **Move SSL Certificates**: Place your certificate and private key inside `server/` named `cert` and `pkey` respectively.
+### 1. Download the Application
+SSH into your server and clone the repository directly from GitHub:
 
-### 2. Launch Containers
-Execute the following from the project root:
 ```bash
-docker compose up -d --build
+cd /home/career/
+git clone https://github.com/panpapadopoulos/cdiqv2.git uop-cdiq
+cd uop-cdiq
 ```
 
-### 3. Global Initialization (Run Once)
-To initialize the database, tables, and default operator accounts securely, run the setup script inside the container:
+### 2. Configure Environment & Hidden Files
+Because sensitive files are hidden from Git, you must manually create them on the server:
+
+1. **Create the Environment File:**
+   ```bash
+   nano .env
+   ```
+   Paste the following into your `.env` file, replacing the passwords and ID:
+   ```env
+   SERVER_NAME="apps.careerday.fet.uop.gr"
+   SERVER_SSL_CERT_FILE="/etc/ssl_for_https/cert"
+   SERVER_SSL_PKEY_FILE="/etc/ssl_for_https/pkey"
+
+   DBMS_USERNAME="postgres"
+   DBMS_PASSWORD="yournewsecurepassword"
+   DBMS_DATABASE="cdiq"
+
+   CANDIDATE_GOOGLE_CLIENT_ID="YOUR_GOOGLE_CLIENT_ID"
+   ```
+   *Save and exit Nano (`Ctrl+O`, `Enter`, `Ctrl+X`).*
+
+2. **Generate Your Certificates:** 
+   Run these commands to instantly generate your SSL certs valid for 1 year:
+   ```bash
+   cd server
+   openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout pkey -out cert -subj "/C=GR/ST=Attica/L=Athens/O=UoP/OU=IT/CN=apps.careerday.fet.uop.gr"
+   cd ..
+   ```
+
+### 3. Build & Boot the Server
 ```bash
-docker compose exec server php cli_setup.php
+# Build the main stack and start it in the background
+docker compose up -d --build server dbms
 ```
 
-> [!IMPORTANT]
-> This command will print **random temporary passwords** for the Secretary and Gatekeeper. Copy them immediately!
+### 4. Initialize Database and Accounts
+Since you are starting a fresh clone, the database must be constructed and your doors (Secretary/Gatekeeper) need accounts.
 
-### 4. Next Steps
-1. **Admin Login**: Access the Superadmin dashboard at `/costas/os.php`.
-2. **Change Passwords**: Use the **👥 Operators** tab in the Superadmin page to update the temporary passwords.
-3. **Setup Complete**: Your server is now initialized, hardened, and ready for the event.
+```bash
+# Enter the running server container
+docker exec -it uop-cdiq-server-1 bash
+
+# 1. Build all the database tables
+php .private/_admin/dbms/create.php
+
+# 2. Create the Operator Accounts (enter secure passwords when prompted)
+php .private/_admin/operators.php add secretary gg
+php .private/_admin/operators.php add gatekeeper gg
+
+# 3. Exit the container
+exit
+```
+
+### 5. Final Setup
+1. Visit `https://apps.careerday.fet.uop.gr/costas/os.php` to access the Superadmin dashboard.
+2. Enter your master password to secure the `.superadmin_hash`.
+3. Use the new **🧪 Test Data** tab to instantly generate mock Companies and Candidates to test the flow!
 
 ---
 *Created for the UoP Career Fair 2026.*
