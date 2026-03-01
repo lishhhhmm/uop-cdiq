@@ -255,6 +255,10 @@ $a->body_main = function () { ?>
 			</div>
 
 			<p id="iwee_notice" style="text-align: center;"></p>
+			<button id="iwee_button_add_candidate" type="button" style="display: none; width: 100%; margin-top: 0.25rem;"
+				onclick="document.getElementById('form_button_update').click();">
+				➕ Add Candidate
+			</button>
 		</fieldset> <!-- interviewee -->
 
 		<button id="form_button_update_top" name="form_button_update_top" type="submit"

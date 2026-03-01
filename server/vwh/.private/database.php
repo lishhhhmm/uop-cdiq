@@ -7,6 +7,13 @@ abstract class UpdateRequest
 
 	public readonly int $update_id_known; # when creating the request
 
+	/**
+	 * When true, update_handle() skips the global update_id staleness check.
+	 * Safe ONLY for operations that are inherently atomic (e.g. INSERT ON CONFLICT,
+	 * DELETE WHERE state_ = 'ENQUEUED'). Never set this on ordering-sensitive writes.
+	 */
+	public bool $bypass_update_id_check = false;
+
 	public function __construct(int $update_id_known)
 	{
 		$this->update_id_known = $update_id_known;
@@ -140,23 +147,33 @@ class SecretaryEnqueueDequeue extends UpdateRequest
 			}
 
 			$insert .= implode(", ", $values);
-			$insert .= " ON CONFLICT ON CONSTRAINT pair_interviewer_interviewee DO ";
-			$insert .= "UPDATE
-				SET state_timestamp = EXCLUDED.state_timestamp
-				WHERE interview.state_ = EXCLUDED.state_
-			;";
+			$insert .= " ON CONFLICT ON CONSTRAINT pair_interviewer_interviewee DO NOTHING;";
+			// ^^^^ Changed from DO UPDATE: preserve the original queue position (state_timestamp).
+			// Whether the entry was added by the secretary or the candidate, we keep the earliest timestamp.
 
 			if ($pdo->query($insert) === false) {
 				throw new Exception("failed to execute query");
 			}
 		}
 
-		$statement = $pdo->query("DELETE
-			FROM interview
-			WHERE id_interviewee = {$this->iwee_id}
-			AND state_ = 'ENQUEUED'
-			AND state_timestamp < '{$timestamp_enqueuing}'
-		;");
+		// Only delete ENQUEUED entries that the secretary explicitly DID NOT include.
+		// This preserves candidate self-joined queues that the secretary left alone.
+		if (count($this->iwer_ids_to_enqueue) > 0) {
+			$placeholders = implode(', ', $this->iwer_ids_to_enqueue);
+			$statement = $pdo->query("DELETE
+				FROM interview
+				WHERE id_interviewee = {$this->iwee_id}
+				AND state_ = 'ENQUEUED'
+				AND id_interviewer NOT IN ({$placeholders})
+			;");
+		} else {
+			// Secretary submitted with nothing selected → remove all ENQUEUED entries for this candidate
+			$statement = $pdo->query("DELETE
+				FROM interview
+				WHERE id_interviewee = {$this->iwee_id}
+				AND state_ = 'ENQUEUED'
+			;");
+		}
 
 		if ($statement === false) {
 			throw new Exception("failed to execute query");
@@ -929,7 +946,9 @@ class CandidateSelfRegister extends UpdateRequest
 			}
 		}
 
-		// 2. Enqueue for selected companies (same logic as SecretaryEnqueueDequeue)
+		// 2. Enqueue for selected companies
+		// If the row already exists and is ENQUEUED, do NOT overwrite state_timestamp 
+		// because we want them to keep their existing place in line.
 		$ts = $pdo->query('SELECT NOW();')->fetch()['now'];
 
 		if (count($this->interviewer_ids) > 0) {
@@ -939,31 +958,16 @@ class CandidateSelfRegister extends UpdateRequest
 			));
 			$insert = "INSERT INTO interview (id_interviewer, id_interviewee, state_, state_timestamp)
 					   VALUES {$values}
-					   ON CONFLICT ON CONSTRAINT pair_interviewer_interviewee DO
-					   UPDATE SET state_timestamp = EXCLUDED.state_timestamp
-					   WHERE interview.state_ = EXCLUDED.state_;";
+					   ON CONFLICT ON CONSTRAINT pair_interviewer_interviewee DO NOTHING;";
 			if ($pdo->query($insert) === false) {
 				throw new Exception('failed to enqueue for companies');
 			}
 		}
 
-		// 3. Remove ENQUEUED entries for companies the student de-selected
-		if (count($this->interviewer_ids) > 0) {
-			$ids_list = implode(',', $this->interviewer_ids);
-			$dequeue_sql = "DELETE FROM interview
-				WHERE id_interviewee = {$iwee_id}
-				AND state_ = 'ENQUEUED'
-				AND state_timestamp < '{$ts}'
-				AND id_interviewer NOT IN ({$ids_list});";
-		} else {
-			$dequeue_sql = "DELETE FROM interview
-				WHERE id_interviewee = {$iwee_id}
-				AND state_ = 'ENQUEUED'
-				AND state_timestamp < '{$ts}';";
-		}
-		if ($pdo->query($dequeue_sql) === false) {
-			throw new Exception('failed to dequeue old companies');
-		}
+		// 3. We NEVER want the registration form to remove existing queues. 
+		// If the secretary pre-registered them for companies they forgot to check, 
+		// we should preserve those queues. The candidate can remove them later from the dashboard.
+		// Therefore, we removed the DELETE query that drops ENQUEUED entries not in the new list.
 	}
 
 	public function when_dispatch_fails(): void
@@ -1052,6 +1056,7 @@ class CandidateLeaveQueue extends UpdateRequest
 	public function __construct(int $update_id_known, int $iwee_id, int $iwer_id)
 	{
 		parent::__construct($update_id_known);
+		$this->bypass_update_id_check = true; // DELETE WHERE state_='ENQUEUED' is atomic
 		$this->iwee_id = $iwee_id;
 		$this->iwer_id = $iwer_id;
 	}
@@ -1088,6 +1093,7 @@ class CandidateJoinQueue extends UpdateRequest
 	public function __construct(int $update_id_known, int $iwee_id, int $iwer_id)
 	{
 		parent::__construct($update_id_known);
+		$this->bypass_update_id_check = true; // INSERT ON CONFLICT DO NOTHING is atomic
 		$this->iwee_id = $iwee_id;
 		$this->iwer_id = $iwer_id;
 	}
@@ -1268,14 +1274,16 @@ class Postgres implements Database, DatabaseAdmin, DatabaseJobPositions
 						throw new UpdateHandleUnexpectedException("unable to acquire lock for shared data");
 					}
 
-					$urid = $this->pdo->query("SELECT * FROM update_recent_id;");
+					if (!$update_request->bypass_update_id_check) {
+						$urid = $this->pdo->query("SELECT * FROM update_recent_id;");
 
-					if ($urid === false) {
-						throw new UpdateHandleUnexpectedException("unable to retrieve recent update");
-					}
+						if ($urid === false) {
+							throw new UpdateHandleUnexpectedException("unable to retrieve recent update");
+						}
 
-					if ($urid->fetch()['recent'] !== $update_request->update_id_known) {
-						throw new UpdateHandleExpectedException("some updates happened before your submission, they should have been send to you by now or soon");
+						if ($urid->fetch()['recent'] !== $update_request->update_id_known) {
+							throw new UpdateHandleExpectedException("some updates happened before your submission, they should have been send to you by now or soon");
+						}
 					}
 
 					$updated_or_reason = $update_request->dispatch($this->pdo);

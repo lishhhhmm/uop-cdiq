@@ -125,10 +125,12 @@ $a->body_main = function () use ($candidate, $candidate_row, $update_id, $flash)
                         <span class="profile-chip"><?= htmlspecialchars($int) ?></span>
                     <?php endforeach; ?>
                     <?php if ($candidate_row['cv_resource_url']): ?>
-                        <a href="<?= htmlspecialchars($candidate_row['cv_resource_url']) ?>" id="btn-view-cv" class="btn-primary" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;">📄 View CV</a>
+                        <a href="<?= htmlspecialchars($candidate_row['cv_resource_url']) ?>" id="btn-view-cv"
+                            class="btn-primary" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;">📄 View CV</a>
                         <button type="button" id="btn-change-cv" class="btn-outline-sm">🔄 Change CV</button>
                     <?php else: ?>
-                        <button type="button" id="btn-upload-cv" class="btn-primary" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;">📄 Upload CV</button>
+                        <button type="button" id="btn-upload-cv" class="btn-primary"
+                            style="padding: 0.25rem 0.5rem; font-size: 0.85rem;">📄 Upload CV</button>
                     <?php endif; ?>
                     <button type="button" id="btn-edit-profile" class="btn-outline-sm">✏️ Edit Profile</button>
                     <input type="file" id="cv-upload-input" accept="application/pdf" style="display:none;">
@@ -237,9 +239,9 @@ $a->body_main = function () use ($candidate, $candidate_row, $update_id, $flash)
                 </label>
 
                 <label style="display: flex; flex-direction: column; gap: 0.3rem;">
-                    <strong>Master's Degree (optional)</strong>
+                    <strong>Master's Degree <span style="font-weight:400; font-size:0.85rem;">(optional)</span></strong>
                     <input type="text" name="masters" value="<?= htmlspecialchars($candidate_row['masters'] ?? '') ?>"
-                        style="padding: 0.5rem;">
+                        style="padding: 0.5rem;" placeholder="e.g. Data Science, Business Administration">
                 </label>
 
                 <div>
@@ -257,6 +259,22 @@ $a->body_main = function () use ($candidate, $candidate_row, $update_id, $flash)
                         }
                         ?>
                     </div>
+                </div>
+
+                <!-- CV section (uses the existing JS upload flow) -->
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <strong>CV <span style="font-weight:400; font-size:0.85rem;">(optional, PDF only, max 1
+                            MB)</span></strong>
+                    <?php if (!empty($candidate_row['cv_resource_url'])): ?>
+                        <p style="font-size:0.85rem; color:var(--text-secondary); margin:0;">
+                            Current: <a href="<?= htmlspecialchars($candidate_row['cv_resource_url']) ?>" target="_blank"
+                                style="color:var(--brand-maroon);">View current CV</a>
+                        </p>
+                    <?php else: ?>
+                        <p style="font-size:0.85rem; color:var(--text-secondary); margin:0;">No CV uploaded yet.</p>
+                    <?php endif; ?>
+                    <input type="file" id="cv-upload-input-profile" accept="application/pdf" style="padding: 0.4rem 0;">
+                    <p id="cv-upload-profile-status" style="font-size:0.8rem; color:var(--text-secondary); margin:0;"></p>
                 </div>
 
                 <button type="submit" class="btn-primary" style="margin-top: 1rem;">Save Profile</button>

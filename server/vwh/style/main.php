@@ -1,4 +1,5 @@
-<?php header("Content-type: text/css"); ?>
+<?php header("Content-type: text/css");
+header("Cache-Control: public, max-age=3600"); ?>
 
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
 
@@ -499,9 +500,11 @@ width: 100%;
 background-color: var(--bg-card);
 border: 1px solid var(--border);
 border-radius: var(--radius-xl);
-overflow: hidden;
+overflow: visible; /* changed from hidden so .joined-badge can pop outside card */
 transition: all var(--transition-normal);
 position: relative;
+/* clip the card's own background/border at the rounded corners without clipping children */
+isolation: isolate;
 
 & > .info {
 display: flex;
@@ -532,6 +535,7 @@ background-color: var(--text-secondary);
 position: absolute;
 top: 0;
 left: 0;
+border-radius: var(--radius-xl) var(--radius-xl) 0 0;
 }
 
 & > .status_indicator--available {
@@ -2050,6 +2054,30 @@ order: -1; /* pushed to start of grid */
 50% { box-shadow: 0 0 0 3px #a855f7, 0 0 32px 8px rgba(168,85,247,0.5); }
 }
 
+/* Joined Queue Badge */
+.joined-badge {
+position: absolute;
+top: -10px;
+right: -10px;
+background: linear-gradient(135deg, var(--brand-maroon) 0%, var(--brand-orange) 100%);
+color: white;
+font-size: 0.75rem;
+font-weight: 800;
+padding: 0.35rem 0.85rem;
+border-radius: 100px;
+box-shadow: 0 4px 12px rgba(161, 32, 36, 0.25);
+z-index: 10;
+opacity: 0;
+transform: scale(0.8);
+transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+pointer-events: none;
+}
+
+.interviewer--joined .joined-badge {
+opacity: 1;
+transform: scale(1);
+}
+
 /* Action button row inside each .interviewer card (below status_information) */
 .candidate-card-actions {
 padding: 0 1rem 0.85rem;
@@ -2084,15 +2112,29 @@ font-weight: 700;
 */
 
 /* 2a. When candidate is being called - other cards dim slightly, colours stay visible */
+/* To keep buttons vivid, we dim the inner containers instead of the whole wrapper */
 .container_interviewers:has(.interviewer--candidate-calling)
-.interviewer:not(.interviewer--candidate-calling) {
-opacity: 0.65;
-filter: brightness(0.82);
+.interviewer:not(.interviewer--candidate-calling) .status_indicator,
+.container_interviewers:has(.interviewer--candidate-calling)
+.interviewer:not(.interviewer--candidate-calling) .info,
+.container_interviewers:has(.interviewer--candidate-calling)
+.interviewer:not(.interviewer--candidate-calling) .status_information {
+opacity: 0.45;
+filter: grayscale(0.5);
 transition: opacity 0.5s ease, filter 0.5s ease;
 }
+
+/* Also dim the joined badge slightly but less aggressively */
 .container_interviewers:has(.interviewer--candidate-calling)
-.interviewer:not(.interviewer--candidate-calling) .status_indicator {
-filter: none;
+.interviewer:not(.interviewer--candidate-calling) .joined-badge {
+opacity: 0.8 !important;
+}
+
+/* Keep buttons fully vivid even when card is dimmed */
+.container_interviewers:has(.interviewer--candidate-calling)
+.interviewer:not(.interviewer--candidate-calling) .candidate-card-actions {
+opacity: 1 !important;
+filter: none !important;
 }
 
 /* 2b. Restore the active card to full vivid brightness */

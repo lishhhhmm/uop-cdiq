@@ -11,6 +11,10 @@ const iwee_buttons = document.getElementById('iwee_buttons');
 const iwee_button_active_inactive = document.getElementById('iwee_button_active_inactive');
 const iwee_notice = document.getElementById('iwee_notice');
 
+// Tracks which interviewer IDs have already been auto-ticked for the currently-selected candidate.
+// Prevents poll-driven re-ticking from overwriting the secretary's manual unchecks.
+let auto_ticked_iwers = new Set();
+
 const iwer_fieldset = document.getElementById('iwer_fieldset');
 const iwer_filter = document.getElementById('iwer_filter');
 const iwer_checkboxes = document.getElementById('iwer_checkboxes');
@@ -94,10 +98,16 @@ iwee_filter.addEventListener('input', function () {
 
 		iwee_notice.innerText = 'A Candidate with email "' + this.value + '" will be created, there is not an existing one.';
 		iwee_option_empty.selected = true;
+
+		const addBtn = document.getElementById('iwee_button_add_candidate');
+		if (addBtn) addBtn.style.display = '';
 	}
 	else {
 		display(true, [iwee_select, iwer_fieldset]);
 		display(false, [iwee_notice]);
+
+		const addBtn = document.getElementById('iwee_button_add_candidate');
+		if (addBtn) addBtn.style.display = 'none';
 
 		options_on[0].selected = true;
 	}
@@ -149,6 +159,9 @@ iwee_select.addEventListener('change', function () {
 
 	let iwer_ids = Object.keys(interviewers);
 
+	// Reset checkbox state and the tracked set whenever the selected candidate changes.
+	auto_ticked_iwers = new Set();
+
 	iwer_ids.forEach(id => {
 		let iwer_checkbox = interviewers[id]['element_input'];
 		iwer_checkbox.disabled = false;
@@ -167,6 +180,7 @@ iwee_select.addEventListener('change', function () {
 			}
 
 			iwer['element_input'].checked = true;
+			auto_ticked_iwers.add(iw['id_interviewer']); // mark as known so polls don't re-tick
 
 			if (iw['state_'] !== 'ENQUEUED') {
 				iwer['element_input'].disabled = true;
@@ -443,19 +457,29 @@ function update(data) {
 	// ===
 
 	if (iwee_option_empty.selected === false) {
+		// Incrementally update checkboxes for the selected candidate without resetting edits.
+		// Only tick checkboxes for interviews that are new since the candidate was selected.
+		// Non-ENQUEUED states (CALLING/DECISION/HAPPENING) always override and disable.
 		iwee_button_active_inactive.innerHTML = interviewees[iwee_select.value]['active'] === true ? "Pause" : "Unpause";
 
 		interviews.forEach(iw => {
-			let iwee = interviewees[iw['id_interviewee']];
+			const iwee = interviewees[iw['id_interviewee']];
+			if (!iwee || iwee['element_option'].selected === false) return;
 
-			if (iwee['element_option'].selected === false) {
-				return;
+			const iwer = interviewers[iw['id_interviewer']];
+			if (!iwer) return;
+
+			if (!auto_ticked_iwers.has(iw['id_interviewer'])) {
+				// Brand-new interview for this candidate: tick it and remember it.
+				auto_ticked_iwers.add(iw['id_interviewer']);
+				iwer['element_input'].checked = true;
 			}
 
 			if (iw['state_'] !== 'ENQUEUED') {
-				let iwer = interviewers[iw['id_interviewer']];
+				// Interview has progressed — always disable regardless of secretary edits.
 				iwer['element_input'].disabled = true;
 				iwer['element_input'].checked = true;
+				auto_ticked_iwers.add(iw['id_interviewer']);
 			}
 		});
 	}

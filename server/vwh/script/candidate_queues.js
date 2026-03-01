@@ -131,6 +131,7 @@ class ElementInterviewerCandidate extends Observer {
     #container; #info_container; #info_img; #info_p;
     #status_indicator; #status_information;
     #action_area; // join / leave button row
+    #joined_badge; // joined badge element
 
     #interviewer;
     #live_time_counter_interval_id;
@@ -164,6 +165,13 @@ class ElementInterviewerCandidate extends Observer {
         // candidate-specific action row
         e = this.#action_area = document.createElement('div');
         e.classList.add('candidate-card-actions');
+        this.#container.append(e);
+
+        // joined badge — hidden by default, shown only when in queue
+        e = this.#joined_badge = document.createElement('div');
+        e.classList.add('joined-badge');
+        e.innerHTML = '✓ Joined';
+        e.style.display = 'none'; // hidden until _renderActionButton shows it
         this.#container.append(e);
     }
 
@@ -230,7 +238,7 @@ class ElementInterviewerCandidate extends Observer {
             }
 
             // ── Highlight: is THIS candidate being called here? ───────────────
-            const candidateIsActive = iw && iw.getInterviewee().getId() == CANDIDATE_ID &&
+            const candidateIsActive = iw && CANDIDATE_ID != null && String(iw.getInterviewee().getId()) === String(CANDIDATE_ID) &&
                 ['CALLING', 'DECISION', 'HAPPENING'].includes(iw.getState());
 
             if (candidateIsActive) {
@@ -253,16 +261,18 @@ class ElementInterviewerCandidate extends Observer {
         area.innerHTML = '';
 
         // Has the candidate already completed an interview here? Block re-joining.
-        const hasCompleted = completedInterviews.some(iw => iw.getInterviewee().getId() == CANDIDATE_ID);
+        const hasCompleted = CANDIDATE_ID != null && completedInterviews.some(iw => String(iw.getInterviewee().getId()) === String(CANDIDATE_ID));
 
         // Is the candidate currently in this company's active queue?
-        const myInterview = interviews.find(iw => iw.getInterviewee().getId() == CANDIDATE_ID);
+        const myInterview = CANDIDATE_ID != null && interviews.find(iw => String(iw.getInterviewee().getId()) === String(CANDIDATE_ID));
 
-        // Mark card as joined regardless of exact state
+        // Mark card as joined regardless of exact state — and toggle badge
         if (myInterview) {
             this.#container.classList.add('interviewer--joined');
+            this.#joined_badge.style.display = '';
         } else {
             this.#container.classList.remove('interviewer--joined');
+            this.#joined_badge.style.display = 'none';
         }
 
         if (hasCompleted) {
@@ -382,7 +392,7 @@ class ElementDialogInterviewer extends Observer {
             el.textContent = iwee.getId();
 
             // Highlight this candidate's own entry
-            if (iwee.getId() == CANDIDATE_ID) el.classList.add('interviewee--self');
+            if (String(iwee.getId()) === String(CANDIDATE_ID)) el.classList.add('interviewee--self');
 
             if (done) { el.classList.add('interviewee--completed'); return el; }
             if (interview === iw_c) {
@@ -423,6 +433,55 @@ class ElementDialogInterviewer extends Observer {
         this.#el_count.innerHTML = `( ${waitingInterviews.length} )`;
         this.#el_done_list.replaceChildren(...iwer.getInterviewsCompleted().map(iw => make(iw, true)));
         this.#el_done_count.innerHTML = `( ${iwer.getInterviewsCompleted().length} )`;
+
+        // Add Join/Leave button below the lists
+        if (!this.#dialog.querySelector('.dialog-action-area')) {
+            const actionArea = this.#dialog.appendChild(document.createElement('div'));
+            actionArea.classList.add('dialog-action-area');
+            actionArea.style.marginTop = '1.5rem';
+            actionArea.style.paddingTop = '1rem';
+            actionArea.style.borderTop = '1px solid var(--border-subtle)';
+        }
+
+        const actionArea = this.#dialog.querySelector('.dialog-action-area');
+        actionArea.innerHTML = ''; // Clear previous button
+
+        const hasCompleted = CANDIDATE_ID != null && iwer.getInterviewsCompleted().some(iw => String(iw.getInterviewee().getId()) === String(CANDIDATE_ID));
+        const myInterview = CANDIDATE_ID != null && iwer.getInterviews().find(iw => String(iw.getInterviewee().getId()) === String(CANDIDATE_ID));
+
+        if (hasCompleted) {
+            const note = document.createElement('p');
+            note.style.textAlign = 'center';
+            note.style.color = 'var(--text-secondary)';
+            note.textContent = '✅ Interview completed.';
+            actionArea.append(note);
+        } else if (!myInterview) {
+            const btn = document.createElement('button');
+            btn.className = 'btn-primary';
+            btn.textContent = '+ Join Queue';
+            btn.style.width = '100%';
+            btn.addEventListener('click', () => submitCandidateAction('join', iwer.getId()));
+            actionArea.append(btn);
+        } else if (myInterview.getState() === 'ENQUEUED') {
+            const btn = document.createElement('button');
+            btn.className = 'btn-outline-sm';
+            btn.textContent = 'Leave Queue';
+            btn.style.width = '100%';
+            btn.style.borderColor = '#e11d48';
+            btn.style.color = '#e11d48';
+            btn.addEventListener('click', () => {
+                if (confirm(`Leave the queue for ${iwer.getName()}?`)) {
+                    submitCandidateAction('leave', iwer.getId());
+                }
+            });
+            actionArea.append(btn);
+        } else {
+            const note = document.createElement('p');
+            note.style.textAlign = 'center';
+            note.style.color = 'var(--text-secondary)';
+            note.textContent = 'Cannot leave while interview is active.';
+            actionArea.append(note);
+        }
     }
 
     get() { return this.#dialog; }
@@ -465,11 +524,57 @@ function update(data) {
     // Update live stats
     let activeQueues = 0, completedCount = 0;
     interviewers.getAll().forEach(iwer => {
-        if (iwer.getInterviews().some(iw => iw.getInterviewee().getId() == CANDIDATE_ID)) activeQueues++;
-        if (iwer.getInterviewsCompleted().some(iw => iw.getInterviewee().getId() == CANDIDATE_ID)) completedCount++;
+        if (CANDIDATE_ID != null && iwer.getInterviews().some(iw => String(iw.getInterviewee().getId()) === String(CANDIDATE_ID))) activeQueues++;
+        if (CANDIDATE_ID != null && iwer.getInterviewsCompleted().some(iw => String(iw.getInterviewee().getId()) === String(CANDIDATE_ID))) completedCount++;
     });
     if (el_stat_queues) el_stat_queues.textContent = activeQueues;
     if (el_stat_completed) el_stat_completed.textContent = completedCount;
+
+    // ── Sort Company Cards ──
+    // 1. Calling/Decision/Happening with THIS candidate
+    // 2. Joined Queues (waiting in line)
+    // 3. Unjoined Queues (available to join)
+    // 4. Completed Queues
+    if (hasAny) {
+        const cards = Array.from(container_interviewers.querySelectorAll('.interviewer'));
+        cards.sort((a, b) => {
+            // Find the Interviewer object for each DOM element.
+            // (We match by looking at the company name in the DOM or tracking it.
+            // A safer way is to use the globally accessible interviewers array and find
+            // which element belongs to which interviewer by checking if the element matches the one created by the observer.
+            // However, the ElementInterviewerCandidate observer directly mutates the DOM elements we're looking at.)
+
+            // Fortunately, we added CSS classes that represent these exact states!
+            const getRank = (el) => {
+                if (el.classList.contains('interviewer--candidate-calling')) return 1;
+
+                // If it has a completed note inside the action area, it's completed
+                const actionArea = el.querySelector('.candidate-card-actions');
+                const isCompleted = actionArea && actionArea.textContent.includes('Interview completed');
+                if (isCompleted) return 4;
+
+                if (el.classList.contains('interviewer--joined')) return 2;
+
+                // Unjoined
+                return 3;
+            };
+
+            const rankA = getRank(a);
+            const rankB = getRank(b);
+
+            if (rankA !== rankB) {
+                return rankA - rankB; // Lower rank comes first
+            }
+
+            // Fallback: alphabetical sort by company name
+            const nameA = a.querySelector('.text')?.textContent?.toLowerCase() || '';
+            const nameB = b.querySelector('.text')?.textContent?.toLowerCase() || '';
+            return nameA.localeCompare(nameB);
+        });
+
+        // Re-append in sorted order
+        cards.forEach(card => container_interviewers.appendChild(card));
+    }
 }
 
 function update_interviewers(rows) {
@@ -635,6 +740,52 @@ document.addEventListener('DOMContentLoaded', () => {
                     elCvInput.disabled = false;
                     if (elBtnChangeCv) elBtnChangeCv.textContent = '🔄 Change CV';
                     if (elBtnUploadCv) elBtnUploadCv.textContent = '📄 Upload CV';
+                });
+        });
+    }
+
+    // CV upload from the Edit Profile dialog
+    const elCvInputProfile = document.getElementById('cv-upload-input-profile');
+    const elCvProfileStatus = document.getElementById('cv-upload-profile-status');
+    if (elCvInputProfile) {
+        elCvInputProfile.addEventListener('change', () => {
+            if (elCvInputProfile.files.length === 0) return;
+
+            const file = elCvInputProfile.files[0];
+            if (file.type !== 'application/pdf') {
+                elCvProfileStatus.textContent = '❌ Please select a PDF file.';
+                elCvInputProfile.value = '';
+                return;
+            }
+            if (file.size > 1048576) {
+                elCvProfileStatus.textContent = '❌ CV file size must not exceed 1 MB.';
+                elCvInputProfile.value = '';
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('action', 'update_cv');
+            formData.append('update_id', latest_update_id);
+            formData.append('cv', file);
+
+            elCvInputProfile.disabled = true;
+            elCvProfileStatus.textContent = '⏳ Uploading...';
+
+            fetch('/candidate_update.php', { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        elCvProfileStatus.textContent = '✅ CV uploaded! Reloading...';
+                        setTimeout(() => location.reload(), 800);
+                    } else {
+                        elCvProfileStatus.textContent = '❌ Upload failed: ' + (data.error || 'Unknown error');
+                        elCvInputProfile.disabled = false;
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    elCvProfileStatus.textContent = '❌ An error occurred during upload.';
+                    elCvInputProfile.disabled = false;
                 });
         });
     }
