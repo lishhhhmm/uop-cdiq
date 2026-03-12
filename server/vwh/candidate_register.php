@@ -243,6 +243,14 @@ function checkRegisteredAndRedirect(token) {
     .then(data => {
         if (data.success && data.registered) {
             window.location.href = '/candidate_dashboard.php';
+        } else if (data.success === false && data.error) {
+            // The token was explicitly rejected by candidate_verify_google_token
+            const errEl = document.getElementById('signin-error');
+            if(errEl) {
+                errEl.style.display = 'block';
+                errEl.textContent = '⚠️ Sign-in rejected: ' + data.error;
+            }
+            console.error("Backend auth error:", data.error);
         } else {
             // Not registered yet, show the form
             if (token) {
@@ -259,12 +267,11 @@ function checkRegisteredAndRedirect(token) {
         }
     })
     .catch(err => {
-        console.error("Auto-login error:", err);
-        // Fallback to normal flow if something breaks
-        if (token) {
-             const parts = token.split('.');
-             const payload = JSON.parse(atob(parts[1]));
-             showProfileAndForm(payload.name || '', payload.email || '', payload.picture || '');
+        console.error("Auto-login AJAX error:", err);
+        const errEl = document.getElementById('signin-error');
+        if(errEl) {
+            errEl.style.display = 'block';
+            errEl.textContent = '⚠️ Network error during sign-in. Check the console.';
         }
     });
 }
