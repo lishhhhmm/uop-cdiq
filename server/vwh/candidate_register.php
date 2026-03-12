@@ -210,11 +210,25 @@ function toggleOtherDept(val) {
     document.getElementById('other-dept-group').style.display = (val === 'Other') ? 'block' : 'none';
 }
 
+function decodeJwtPayload(token) {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    // Decode base64 to a binary string
+    const binString = window.atob(base64);
+    // Convert binary string to a Uint8Array
+    const bytes = new Uint8Array(binString.length);
+    for (let i = 0; i < binString.length; i++) {
+        bytes[i] = binString.charCodeAt(i);
+    }
+    // Decode the bytes as UTF-8 using the modern TextDecoder API
+    const jsonPayload = new TextDecoder('utf-8').decode(bytes);
+    return JSON.parse(jsonPayload);
+}
+
 // ── Real Google Sign-In callback ──
 function handleGoogleSignIn(response) {
     const token = response.credential;
-    const parts = token.split('.');
-    const payload = JSON.parse(atob(parts[1]));
+    const payload = decodeJwtPayload(token);
     const email = payload.email || '';
 
     if (!email.endsWith('@go.uop.gr')) {
@@ -254,8 +268,7 @@ function checkRegisteredAndRedirect(token) {
         } else {
             // Not registered yet, show the form
             if (token) {
-                 const parts = token.split('.');
-                 const payload = JSON.parse(atob(parts[1]));
+                 const payload = decodeJwtPayload(token);
                  document.getElementById('google_token_field').value = token;
                  showProfileAndForm(payload.name || '', payload.email || '', payload.picture || '');
             } else {
