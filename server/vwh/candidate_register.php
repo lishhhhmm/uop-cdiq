@@ -100,6 +100,7 @@ $a->body_main = function () use ($all_interviewers, $update_id, $flash) { ?>
             <input type="hidden" name="action"      value="register">
             <input type="hidden" name="update_id"   value="<?= $update_id ?>">
             <input type="hidden" name="google_token" id="google_token_field" value="">
+            <div id="existing-registration-notice" class="form-flash animate-fade-in" style="display:none; margin-bottom:1rem;"></div>
 
             <!-- Profile preview -->
             <div class="user-info" id="user-info-preview">
@@ -159,6 +160,7 @@ $a->body_main = function () use ($all_interviewers, $update_id, $flash) { ?>
                 <h3 class="form-section-title">CV <span class="label-optional">(optional)</span></h3>
                 <div class="form-group">
                     <label for="cv">Upload your CV as a PDF — companies may view it before the interview</label>
+                    <p id="existing-cv-note" class="form-hint" style="display:none; margin-bottom:0.6rem;"></p>
                     <div class="file-drop-zone" id="cv-drop-zone">
                         <input type="file" id="cv" name="cv" accept="application/pdf" class="file-input">
                         <div class="file-drop-label">
@@ -181,6 +183,7 @@ $a->body_main = function () use ($all_interviewers, $update_id, $flash) { ?>
                         <img src="<?= htmlspecialchars($co['image_resource_url']) ?>"
                              alt="<?= htmlspecialchars($co['name']) ?>" class="company-pick-logo">
                         <span class="company-pick-name"><?= htmlspecialchars($co['name']) ?></span>
+                        <span data-company-joined-note="<?= (int)$co['id'] ?>" style="display:none; font-size:0.74rem; color:#166534; font-weight:600;">Already joined</span>
                         <?php if (!$co['active']): ?>
                             <span class="company-pick-closed">Closed</span>
                         <?php endif; ?>
@@ -270,12 +273,12 @@ function checkRegisteredAndRedirect(token) {
             if (token) {
                  const payload = decodeJwtPayload(token);
                  document.getElementById('google_token_field').value = token;
-                 showProfileAndForm(payload.name || '', payload.email || '', payload.picture || '');
+                 showProfileAndForm(payload.name || '', payload.email || '', payload.picture || '', data);
             } else {
                  document.getElementById('dev_name_field').value  = devProfile.name;
                  document.getElementById('dev_email_field').value = devProfile.email;
                  document.getElementById('dev_sub_field').value   = devProfile.sub;
-                 showProfileAndForm(devProfile.name, devProfile.email, '');
+                 showProfileAndForm(devProfile.name, devProfile.email, '', data);
             }
         }
     })
@@ -289,10 +292,126 @@ function checkRegisteredAndRedirect(token) {
     });
 }
 
-function showProfileAndForm(name, email, picture) {
-    document.getElementById('reg-avatar').src  = picture;
+function setSelectValue(select, value) {
+    if (!select || !value) return false;
+    const optionValues = Array.from(select.options).map(opt => opt.value);
+    if (optionValues.includes(value)) {
+        select.value = value;
+        return true;
+    }
+    return false;
+}
+
+function resetRegistrationPrefill() {
+    const notice = document.getElementById('existing-registration-notice');
+    const cvNote = document.getElementById('existing-cv-note');
+    const deptSelect = document.getElementById('dept');
+    const otherDept = document.getElementById('other-dept');
+    const masters = document.getElementById('masters');
+
+    if (notice) {
+        notice.style.display = 'none';
+        notice.className = 'form-flash animate-fade-in';
+        notice.textContent = '';
+    }
+    if (cvNote) {
+        cvNote.style.display = 'none';
+        cvNote.textContent = '';
+    }
+    if (deptSelect) deptSelect.selectedIndex = 0;
+    if (otherDept) otherDept.value = '';
+    toggleOtherDept('');
+    if (masters) masters.value = '';
+
+    document.querySelectorAll('input[name="interests[]"]').forEach(input => {
+        input.checked = false;
+    });
+
+    document.querySelectorAll('input[name="companies[]"]').forEach(input => {
+        input.checked = false;
+    });
+
+    document.querySelectorAll('[data-company-joined-note]').forEach(el => {
+        el.style.display = 'none';
+    });
+}
+
+function applyExistingCandidateData(data) {
+    resetRegistrationPrefill();
+
+    const existing = data && data.candidate ? data.candidate : null;
+    if (!existing) return;
+
+    const notice = document.getElementById('existing-registration-notice');
+    const cvNote = document.getElementById('existing-cv-note');
+    const deptSelect = document.getElementById('dept');
+    const otherDept = document.getElementById('other-dept');
+    const masters = document.getElementById('masters');
+    const joinedIds = new Set((existing.joined_company_ids || []).map(String));
+    const joinedNames = existing.joined_company_names || [];
+
+    if (notice) {
+        let message = data.message || 'We found an existing registration with this email.';
+        if (data.secretary_origin) {
+            message = 'You are already registered at the Secretary desk with this email. Your registration number and joined queues will stay the same. Fill in the rest of your profile to continue to your dashboard.';
+        }
+        if (joinedNames.length > 0) {
+            message += ' Already joined: ' + joinedNames.join(', ') + '.';
+        }
+        notice.textContent = message;
+        notice.className = 'form-flash form-flash--success animate-fade-in';
+        notice.style.display = 'block';
+    }
+
+    const department = (existing.department || '').trim();
+    if (department) {
+        if (!setSelectValue(deptSelect, department)) {
+            deptSelect.value = 'Other';
+            otherDept.value = department;
+            toggleOtherDept('Other');
+        } else {
+            toggleOtherDept(deptSelect.value);
+        }
+    }
+
+    if (masters) {
+        masters.value = existing.masters || '';
+    }
+
+    const interests = (existing.interests || '')
+        .split(',')
+        .map(v => v.trim())
+        .filter(Boolean);
+
+    document.querySelectorAll('input[name="interests[]"]').forEach(input => {
+        input.checked = interests.includes(input.value);
+    });
+
+    document.querySelectorAll('input[name="companies[]"]').forEach(input => {
+        if (joinedIds.has(String(input.value))) {
+            input.checked = true;
+        }
+    });
+
+    document.querySelectorAll('[data-company-joined-note]').forEach(el => {
+        if (joinedIds.has(el.getAttribute('data-company-joined-note'))) {
+            el.style.display = 'inline';
+        }
+    });
+
+    if (cvNote && existing.cv_resource_url) {
+        cvNote.textContent = 'A CV is already on file for this email. Upload a new PDF only if you want to replace it.';
+        cvNote.style.display = 'block';
+    }
+}
+
+function showProfileAndForm(name, email, picture, existingData = null) {
+    document.getElementById('reg-avatar').src  = picture || '';
+    document.getElementById('reg-avatar').style.display = picture ? '' : 'none';
     document.getElementById('reg-name').textContent  = name;
     document.getElementById('reg-email').textContent = email;
+
+    applyExistingCandidateData(existingData);
 
     document.getElementById('signin-section').style.display = 'none';
     document.getElementById('registration-form').style.display = 'block';
@@ -315,7 +434,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const dept      = document.getElementById('dept').value;
         const interests = form.querySelectorAll('input[name="interests[]"]:checked');
         const token     = document.getElementById('google_token_field').value;
-        const devSub    = document.getElementById('dev_sub_field').value;
+        const devSubEl  = document.getElementById('dev_sub_field');
+        const devSub    = devSubEl ? devSubEl.value : '';
         const cvInput   = document.getElementById('cv');
 
         document.getElementById('reg-error').style.display = 'none';

@@ -35,6 +35,7 @@ if ($action === 'login') {
         exit;
     }
     $google_sub = $payload['sub'] ?? '';
+    $email = trim($payload['email'] ?? '');
 
     $candidate_row = $db->candidate_by_google_sub($google_sub);
 
@@ -49,7 +50,52 @@ if ($action === 'login') {
         ]);
         echo json_encode(['success' => true, 'registered' => true]);
     } else {
-        echo json_encode(['success' => true, 'registered' => false]);
+        $candidate_row = $email !== '' ? $db->candidate_by_email($email) : false;
+
+        if ($candidate_row) {
+            $dashboard = $db->candidate_dashboard_view((int) $candidate_row['id']);
+            $joined_company_ids = [];
+            $joined_company_names = [];
+
+            foreach (($dashboard['interviews'] ?? []) as $interview) {
+                $company_id = (int) ($interview['id_interviewer'] ?? 0);
+                if ($company_id <= 0) {
+                    continue;
+                }
+
+                $joined_company_ids[] = $company_id;
+
+                $company_name = trim((string) ($interview['company_name'] ?? ''));
+                if ($company_name !== '') {
+                    $joined_company_names[] = $company_name;
+                }
+            }
+
+            $joined_company_ids = array_values(array_unique($joined_company_ids));
+            $joined_company_names = array_values(array_unique($joined_company_names));
+
+            echo json_encode([
+                'success' => true,
+                'registered' => false,
+                'email_matched' => true,
+                'secretary_origin' => empty($candidate_row['google_sub']),
+                'message' => 'We found an existing registration with this email. Your secretary registration and queue selections will be kept. Fill in the rest of your profile to continue to your dashboard.',
+                'candidate' => [
+                    'id' => (int) $candidate_row['id'],
+                    'email' => $candidate_row['email'],
+                    'display_name' => $candidate_row['display_name'] ?? '',
+                    'avatar_url' => $candidate_row['avatar_url'] ?? '',
+                    'department' => $candidate_row['department'] ?? '',
+                    'masters' => $candidate_row['masters'] ?? '',
+                    'interests' => $candidate_row['interests'] ?? '',
+                    'cv_resource_url' => $candidate_row['cv_resource_url'] ?? '',
+                    'joined_company_ids' => $joined_company_ids,
+                    'joined_company_names' => $joined_company_names,
+                ],
+            ]);
+        } else {
+            echo json_encode(['success' => true, 'registered' => false, 'email_matched' => false]);
+        }
     }
     exit;
 }

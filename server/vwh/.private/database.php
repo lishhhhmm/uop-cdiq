@@ -903,6 +903,8 @@ class CandidateSelfRegister extends UpdateRequest
 			? "'{$this->cv_resource_url}'"
 			: "COALESCE((SELECT cv_resource_url FROM interviewee WHERE email = '{$this->email}'), NULL)";
 
+		// Matching by email updates the existing secretary-created row in place,
+		// so the original interviewee ID is preserved.
 		$stmt = $pdo->prepare(
 			"INSERT INTO interviewee
 				(email, google_sub, display_name, avatar_url, department, masters, interests, cv_resource_url, active, available)
