@@ -93,13 +93,13 @@ class Assembler
 						<a href="https://careerday.fet.uop.gr/" class="logo-link" style="box-shadow: none;">
 							<h2 class="animate-fade-in">Career Fair <span class="gradient-text">2026</span></h2>
 						</a>
-						<a href="https://www.uop.gr/sholi-oikonomias-kai-tehnologias" target="_blank" style="box-shadow: none;">
+						<a href="https://www.uop.gr/sholi-oikonomias-kai-tehnologias" target="_blank" class="header-logo-item" style="box-shadow: none;">
 							<img src="/resources/images/UOP.svg" alt="UoP Logo" class="nav-logo">
 						</a>
-						<a href="https://unistarthubs.gr/en/" target="_blank" style="box-shadow: none;">
+						<a href="https://unistarthubs.gr/en/" target="_blank" class="header-logo-item" style="box-shadow: none;">
 							<img src="/resources/images/UNISTART.svg" alt="UniStart Logo" class="nav-logo">
 						</a>
-						<span>
+						<span class="header-logo-item">
 							<img src="/resources/images/BREAKEVEN1.svg" alt="BreakEven Logo" class="nav-logo">
 						</span>
 					</div>

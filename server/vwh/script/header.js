@@ -28,7 +28,48 @@ function initActiveLink() {
 
 }
 
+function initMobileLogoCarousel() {
+    const logoItems = Array.from(document.querySelectorAll('.header-logo-item'));
+    if (logoItems.length <= 2) return;
+
+    let activeIndex = 0;
+    let intervalId = null;
+    const mobileQuery = window.matchMedia('(max-width: 1024px)');
+
+    function render() {
+        logoItems.forEach((item, index) => {
+            const isVisible = index === activeIndex || index === (activeIndex + 1) % logoItems.length;
+            item.classList.toggle('is-visible', isVisible);
+        });
+    }
+
+    function stop() {
+        if (intervalId) {
+            window.clearInterval(intervalId);
+            intervalId = null;
+        }
+    }
+
+    function start() {
+        stop();
+        if (!mobileQuery.matches) {
+            logoItems.forEach(item => item.classList.remove('is-visible'));
+            return;
+        }
+
+        render();
+        intervalId = window.setInterval(() => {
+            activeIndex = (activeIndex + 1) % logoItems.length;
+            render();
+        }, 2200);
+    }
+
+    start();
+    mobileQuery.addEventListener('change', start);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initHamburger();
     initActiveLink();
+    initMobileLogoCarousel();
 });

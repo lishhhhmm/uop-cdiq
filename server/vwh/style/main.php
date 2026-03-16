@@ -1095,6 +1095,12 @@ display: flex;
 align-items: center;
 }
 
+.header-logo-item {
+display: flex;
+align-items: center;
+justify-content: center;
+}
+
 .logo-link {
 text-decoration: none;
 color: inherit;
@@ -1267,6 +1273,25 @@ transform: translateY(0);
 
 .header-logos h2 {
 font-size: 1rem;
+}
+
+.header-logo-item {
+opacity: 0;
+width: 0;
+overflow: hidden;
+transform: scale(0.85);
+transform-origin: center;
+transition: width 0.45s ease, opacity 0.45s ease, transform 0.45s ease, margin 0.45s ease;
+margin: 0;
+pointer-events: none;
+}
+
+.header-logo-item.is-visible {
+opacity: 1;
+width: auto;
+transform: scale(1);
+margin: 0;
+pointer-events: auto;
 }
 
 .nav-logo {

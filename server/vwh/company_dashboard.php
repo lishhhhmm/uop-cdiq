@@ -168,7 +168,7 @@ $a->body_main = function () { ?>
                     style="color: var(--brand-maroon); border-bottom: 2px solid var(--border-subtle); padding-bottom: 0.5rem;">
                     2. Interview States</h3>
                 <ul style="padding-left: 1.5rem;">
-                    <li><strong>CALLING</strong>: Candidate has been notified. Press <strong>"Arrived"</strong> when they
+                    <li><strong>CALLING</strong>: Candidate has been notified. Gatekeeper will press <strong>"Arrived"</strong> when they
                         reach your table. Or Didn't Show up to call next available candidate.</li>
                     <li><strong>HAPPENING</strong>: The interview is in progress. A suggestive 10-minute timer will appear.
                     </li>
@@ -191,7 +191,7 @@ $a->body_main = function () { ?>
                 <h3
                     style="color: var(--brand-maroon); border-bottom: 2px solid var(--border-subtle); padding-bottom: 0.5rem;">
                     4. Pausing</h3>
-                <p>Use <strong>"Pause Interviews"</strong> to stop receiving new candidates. If you are currentlly in an
+                <p>Use <strong>"Pause Interviews"</strong> to stop receiving new candidates, until unpaused again. If you are currentlly in an
                     interview you need to ccomplete before pausing.</p>
             </section>
         </div>
