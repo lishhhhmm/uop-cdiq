@@ -764,7 +764,7 @@ gap: 0.5rem;
 /* --- Index Main --- */
 
 #index-main {
-text-align: center;
+text-align: start;
 width: 100%;
 max-width: 1000px;
 margin: 0 auto;
