@@ -99,6 +99,9 @@ class Assembler
 						<a href="https://unistarthubs.gr/en/" target="_blank" style="box-shadow: none;">
 							<img src="/resources/images/UNISTART.svg" alt="UniStart Logo" class="nav-logo">
 						</a>
+						<span>
+							<img src="/resources/images/BREAKEVEN1.svg" alt="BreakEven Logo" class="nav-logo">
+						</span>
 					</div>
 
 					<button class="hamburger" aria-label="Toggle menu">
