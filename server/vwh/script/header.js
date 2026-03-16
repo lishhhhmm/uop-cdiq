@@ -29,43 +29,55 @@ function initActiveLink() {
 }
 
 function initMobileLogoCarousel() {
-    const logoItems = Array.from(document.querySelectorAll('.header-logo-item'));
-    if (logoItems.length <= 2) return;
+    const track = document.querySelector('.header-logo-track');
+    if (!track) return;
 
-    let activeIndex = 0;
-    let intervalId = null;
+    const logoItems = Array.from(track.querySelectorAll('.header-logo-item'));
+    if (logoItems.length === 0) return;
+
     const mobileQuery = window.matchMedia('(max-width: 1024px)');
+    const clonedClass = 'is-clone';
 
-    function render() {
-        logoItems.forEach((item, index) => {
-            const isVisible = index === activeIndex || index === (activeIndex + 1) % logoItems.length;
-            item.classList.toggle('is-visible', isVisible);
+    function ensureClones() {
+        if (track.querySelector(`.${clonedClass}`)) return;
+
+        logoItems.forEach(item => {
+            const clone = item.cloneNode(true);
+            clone.classList.add(clonedClass);
+            clone.setAttribute('aria-hidden', 'true');
+            track.appendChild(clone);
         });
     }
 
-    function stop() {
-        if (intervalId) {
-            window.clearInterval(intervalId);
-            intervalId = null;
-        }
+    function setLoopWidth() {
+        const visibleItems = Array.from(track.querySelectorAll('.header-logo-item:not(.is-clone)'));
+        const gap = parseFloat(window.getComputedStyle(track).columnGap || window.getComputedStyle(track).gap || '0');
+        const loopWidth = visibleItems.reduce((total, item) => total + item.getBoundingClientRect().width, 0)
+            + Math.max(visibleItems.length - 1, 0) * gap;
+
+        track.style.setProperty('--header-logo-loop-width', `${loopWidth}px`);
+        const duration = Math.max(loopWidth / 28, 6);
+        track.style.animationDuration = `${duration}s`;
     }
 
-    function start() {
-        stop();
+    function sync() {
         if (!mobileQuery.matches) {
-            logoItems.forEach(item => item.classList.remove('is-visible'));
+            track.classList.remove('is-animated');
+            track.style.removeProperty('--header-logo-loop-width');
+            track.style.removeProperty('animation-duration');
             return;
         }
 
-        render();
-        intervalId = window.setInterval(() => {
-            activeIndex = (activeIndex + 1) % logoItems.length;
-            render();
-        }, 2200);
+        ensureClones();
+        window.requestAnimationFrame(() => {
+            setLoopWidth();
+            track.classList.add('is-animated');
+        });
     }
 
-    start();
-    mobileQuery.addEventListener('change', start);
+    sync();
+    mobileQuery.addEventListener('change', sync);
+    window.addEventListener('resize', sync);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

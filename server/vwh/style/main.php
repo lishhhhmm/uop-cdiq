@@ -328,9 +328,8 @@ gap: 0.75rem;
 
 dialog[open] {
 position: fixed;
-top: 2rem;
-left: 50%;
-transform: translateX(-50%);
+inset: 0;
+margin: auto;
 
 display: flex;
 flex-direction: column;
@@ -1099,6 +1098,28 @@ align-items: center;
 display: flex;
 align-items: center;
 justify-content: center;
+flex: 0 0 auto;
+min-width: 0;
+}
+
+.header-logo-item.is-clone {
+display: none;
+}
+
+.header-logo-carousel {
+display: flex;
+align-items: center;
+overflow: hidden;
+}
+
+.header-logo-track {
+display: flex;
+align-items: center;
+gap: 1.5rem;
+}
+
+.header-logo-track.is-animated {
+animation: header-logo-marquee 10s linear infinite;
 }
 
 .logo-link {
@@ -1275,33 +1296,43 @@ transform: translateY(0);
 font-size: 1rem;
 }
 
-.header-logo-item {
-opacity: 0;
-width: 0;
-overflow: hidden;
-transform: scale(0.85);
-transform-origin: center;
-transition: width 0.45s ease, opacity 0.45s ease, transform 0.45s ease, margin 0.45s ease;
-margin: 0;
-pointer-events: none;
+.header-logo-carousel {
+width: calc((var(--header-logo-slot-width, 92px) * 2) + var(--header-logo-gap-mobile, 0.75rem));
 }
 
-.header-logo-item.is-visible {
-opacity: 1;
-width: auto;
-transform: scale(1);
-margin: 0;
-pointer-events: auto;
+.header-logo-track {
+gap: var(--header-logo-gap-mobile, 0.75rem);
+width: max-content;
+}
+
+.header-logo-item {
+flex: 0 0 var(--header-logo-slot-width, 92px);
+width: var(--header-logo-slot-width, 92px);
+}
+
+.header-logo-item.is-clone {
+display: flex;
 }
 
 .nav-logo {
 height: 28px;
+max-width: 100%;
 }
 }
 
 @media (max-width: 480px) {
 .header-logos {
 gap: 0.5rem;
+}
+.header-logo-carousel {
+width: calc((var(--header-logo-slot-width-small, 74px) * 2) + var(--header-logo-gap-small, 0.5rem));
+}
+.header-logo-track {
+gap: var(--header-logo-gap-small, 0.5rem);
+}
+.header-logo-item {
+flex-basis: var(--header-logo-slot-width-small, 74px);
+width: var(--header-logo-slot-width-small, 74px);
 }
 .header-logos h2 {
 font-size: 0.85rem;
@@ -1328,6 +1359,15 @@ font-size: 0.9rem !important;
 }
 .nav-logo {
 height: 30px !important;
+}
+}
+
+@keyframes header-logo-marquee {
+from {
+transform: translateX(0);
+}
+to {
+transform: translateX(calc(-1 * var(--header-logo-loop-width, 0px)));
 }
 }
 
