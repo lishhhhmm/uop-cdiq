@@ -258,6 +258,23 @@ $a->body_main = function () use ($is_authed) { ?>
                     </tbody>
                 </table>
             </div>
+
+            <div class="superadmin-table-container" style="margin-top: 1rem;">
+                <h3 style="margin: 0 0 1rem 0;">Still Enqueued Candidates By Company</h3>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                    <thead>
+                        <tr style="background: var(--bg-secondary); border-bottom: 2px solid var(--border);">
+                            <th style="padding: 0.75rem; text-align: left;">Company</th>
+                            <th style="padding: 0.75rem; text-align: left;">Candidate emails still enqueued</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-stats-pending">
+                        <tr>
+                            <td colspan="2" style="padding: 2rem; text-align: center; color: var(--text-secondary);">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <div id="tab-testdata" style="display: none;">
@@ -826,6 +843,7 @@ $a->assemble(); ?>
         document.getElementById('tbody-top-companies').innerHTML = renderStatsCompaniesRows(topCompanies, 4, 'No completed interviews yet.');
         document.getElementById('tbody-stats-companies').innerHTML = renderStatsCompaniesRows(companies, 4, 'No companies found.');
         document.getElementById('tbody-stats-candidates').innerHTML = renderStatsCandidatesRows(candidates, 5);
+        document.getElementById('tbody-stats-pending').innerHTML = renderPendingCandidatesRows(companies);
     }
 
     function renderStatsCompaniesRows(list, colspan, emptyMessage) {
@@ -857,6 +875,26 @@ $a->assemble(); ?>
                 <td style="padding: 0.5rem 0.75rem; text-align: center;">${formatNumber(c.active_queue)}</td>
             </tr>
         `).join('');
+    }
+
+    function renderPendingCandidatesRows(list) {
+        if (!list.length) {
+            return '<tr><td colspan="2" style="padding: 2rem; text-align: center; color: var(--text-secondary);">No companies found.</td></tr>';
+        }
+
+        return list.map(company => {
+            const pending = company.pending_candidates || [];
+            const content = pending.length
+                ? pending.map(candidate => esc(candidate.email)).join('<br>')
+                : '<span style="color: var(--text-secondary);">None</span>';
+
+            return `
+                <tr>
+                    <td style="padding: 0.75rem; vertical-align: top; font-weight: 600;">${esc(company.name)}</td>
+                    <td style="padding: 0.75rem; vertical-align: top; line-height: 1.6;">${content}</td>
+                </tr>
+            `;
+        }).join('');
     }
 
     function renderOperators(list) {

@@ -132,6 +132,7 @@ function build_stats_summary(Database $db): array
 
     $companyStats = [];
     $candidateStats = [];
+    $candidateLookup = [];
 
     foreach ($interviewers as $company) {
         $companyId = (int) $company['id'];
@@ -142,11 +143,17 @@ function build_stats_summary(Database $db): array
             'total_interviews' => 0,
             'completed_interviews' => 0,
             'active_queue' => 0,
+            'pending_candidates' => [],
         ];
     }
 
     foreach ($interviewees as $candidate) {
         $candidateId = (int) $candidate['id'];
+        $candidateLookup[$candidateId] = [
+            'id' => $candidateId,
+            'email' => $candidate['email'],
+            'display_name' => $candidate['display_name'] ?? '',
+        ];
         $candidateStats[$candidateId] = [
             'id' => $candidateId,
             'email' => $candidate['email'],
@@ -175,6 +182,9 @@ function build_stats_summary(Database $db): array
             }
             if ($isCompleted) {
                 $companyStats[$companyId]['completed_interviews']++;
+            }
+            if ($state === 'ENQUEUED' && isset($candidateLookup[$candidateId])) {
+                $companyStats[$companyId]['pending_candidates'][] = $candidateLookup[$candidateId];
             }
         }
 
