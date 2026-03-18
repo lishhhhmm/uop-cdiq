@@ -32,17 +32,16 @@ services:
       SERVER_SSL_PKEY_FILE: "${SERVER_SSL_PKEY_FILE}"
       CANDIDATE_GOOGLE_CLIENT_ID: "${CANDIDATE_GOOGLE_CLIENT_ID}"
     volumes:
-      - ./server/vwh:/var/www/html/
+       - ./server/vwh:/var/www/html/
     restart: unless-stopped
-  # Suggestions API - commented out due to heavy PyTorch/CUDA dependencies (~2GB)
-  # api:
-  #   build:
-  #     context: ./suggestions-api
-  #     dockerfile: DockerfileAPI
-  #   expose:
-  #     - 8000
-  #   volumes:
-  #     - ./suggestions-api/src:/app
-  #   restart: unless-stopped
-  #   command: uvicorn api:app --host 0.0.0.0 --port 8000 --workers 1
 
+  api:
+    build:
+      context: ./suggestions-api
+      dockerfile: DockerfileAPI
+    expose:
+      - 8000
+    volumes:
+      - ./suggestions-api/src:/app
+    restart: unless-stopped
+    command: uvicorn api:app --host 0.0.0.0 --port 8000 --workers 1

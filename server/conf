@@ -21,6 +21,6 @@
 
         SSLEngine on
 
-    SSLCertificateFile ${SERVER_SSL_CERT_FILE}
+	SSLCertificateFile ${SERVER_SSL_CERT_FILE}
         SSLCertificateKeyFile ${SERVER_SSL_PKEY_FILE}
 </VirtualHost>

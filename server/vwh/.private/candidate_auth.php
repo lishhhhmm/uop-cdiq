@@ -15,7 +15,11 @@
 // The Client ID is injected securely via Docker Compose environment variables
 $client_id = getenv('CANDIDATE_GOOGLE_CLIENT_ID') ?: '';
 
-define('CANDIDATE_GOOGLE_CLIENT_ID', $client_id !== '' ? $client_id : 'REPLACE_WITH_YOUR_CLIENT_ID');
+if (empty($client_id)) {
+    throw new Exception('CANDIDATE_GOOGLE_CLIENT_ID is not set on the environment.');
+}
+
+define('CANDIDATE_GOOGLE_CLIENT_ID', $client_id);
 define('CANDIDATE_SESSION_KEY', 'candidate_profile');
 
 /**
@@ -56,12 +60,8 @@ function candidate_verify_google_token(string $id_token): array|string
         return 'Google error: ' . ($payload['error_description'] ?? $payload['error']);
     }
 
-    // Must be issued for our client
-    // We only enforce this when a real client ID is set
-    if (CANDIDATE_GOOGLE_CLIENT_ID !== 'REPLACE_WITH_YOUR_CLIENT_ID') {
-        if (($payload['aud'] ?? '') !== CANDIDATE_GOOGLE_CLIENT_ID) {
-            return 'Token aud mismatch. Expected: ' . CANDIDATE_GOOGLE_CLIENT_ID;
-        }
+    if (($payload['aud'] ?? '') !== CANDIDATE_GOOGLE_CLIENT_ID) {
+        return 'Token aud mismatch. Expected: ' . CANDIDATE_GOOGLE_CLIENT_ID;
     }
 
     // Token must not be expired (Google already checks this but we double-check)

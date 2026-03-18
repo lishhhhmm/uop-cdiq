@@ -20,6 +20,7 @@ ARG SERVER_SSL_PKEY_FILE
 COPY ./cert "$SERVER_SSL_CERT_FILE"
 COPY ./pkey "$SERVER_SSL_PKEY_FILE"
 
+# ---
 # Copy the Apache configuration file and enable the site
 COPY ./conf /etc/apache2/sites-available/000-default.conf
 RUN a2ensite 000-default && a2dissite default-ssl

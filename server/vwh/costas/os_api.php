@@ -9,7 +9,6 @@ session_start();
 require_once $_SERVER['DOCUMENT_ROOT'] . '/.private/database.php';
 
 // ── Auth Config ──────────────────────────────────────────────────────────────
-// Default password: superadmin2026
 // Change via the dashboard's 🔑 button or regenerate the hash file.
 
 function superadmin_get_hash(): string|null

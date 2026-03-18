@@ -1,5 +1,4 @@
-<?php header("Content-type: text/css");
-header("Cache-Control: public, max-age=3600"); ?>
+<?php header("Content-type: text/css"); ?>
 
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
 

@@ -1,26 +1,10 @@
-# Database data
-dbms/vlpd/
+/dbms/vlpd
 
-# Sensitive private files
-server/vwh/.private/.superadmin_hash
+/server/vwh/.private/.superadmin_hash
 
-# Admin/dev scripts (should not be in production)
-server/vwh/install_db.php
-server/vwh/seed.php
-server/vwh/migrate_candidate_fields.php
+/server/cert
+/server/pkey
 
-# Environment files
-.env
-.env.*
+/server/vwh/resources/images/interviewer/i*
 
-# SSL Certificates (Should never be committed)
-server/cert
-server/pkey
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
+**/__pycache__
