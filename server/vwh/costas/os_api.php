@@ -118,8 +118,127 @@ $db = database();
 $db_admin = database_admin();
 $db_jobs = database_jobpositions();
 
+function stats_round(float $value): float
+{
+    return round($value, 2);
+}
+
+function build_stats_summary(Database $db): array
+{
+    $data = $db->retrieve('interviewer', 'interviewee', 'interview');
+    $interviewers = $data['interviewer'] ?? [];
+    $interviewees = $data['interviewee'] ?? [];
+    $interviews = $data['interview'] ?? [];
+
+    $companyStats = [];
+    $candidateStats = [];
+
+    foreach ($interviewers as $company) {
+        $companyId = (int) $company['id'];
+        $companyStats[$companyId] = [
+            'id' => $companyId,
+            'name' => $company['name'],
+            'table_number' => $company['table_number'] ?? '',
+            'total_interviews' => 0,
+            'completed_interviews' => 0,
+            'active_queue' => 0,
+        ];
+    }
+
+    foreach ($interviewees as $candidate) {
+        $candidateId = (int) $candidate['id'];
+        $candidateStats[$candidateId] = [
+            'id' => $candidateId,
+            'email' => $candidate['email'],
+            'display_name' => $candidate['display_name'] ?? '',
+            'total_interviews' => 0,
+            'completed_interviews' => 0,
+            'active_queue' => 0,
+        ];
+    }
+
+    $totalInterviews = count($interviews);
+    $completedInterviews = 0;
+    $activeInterviews = 0;
+
+    foreach ($interviews as $interview) {
+        $companyId = (int) $interview['id_interviewer'];
+        $candidateId = (int) $interview['id_interviewee'];
+        $state = $interview['state_'] ?? '';
+        $isActive = in_array($state, ['ENQUEUED', 'CALLING', 'DECISION', 'HAPPENING'], true);
+        $isCompleted = $state === 'COMPLETED';
+
+        if (isset($companyStats[$companyId])) {
+            $companyStats[$companyId]['total_interviews']++;
+            if ($isActive) {
+                $companyStats[$companyId]['active_queue']++;
+            }
+            if ($isCompleted) {
+                $companyStats[$companyId]['completed_interviews']++;
+            }
+        }
+
+        if (isset($candidateStats[$candidateId])) {
+            $candidateStats[$candidateId]['total_interviews']++;
+            if ($isActive) {
+                $candidateStats[$candidateId]['active_queue']++;
+            }
+            if ($isCompleted) {
+                $candidateStats[$candidateId]['completed_interviews']++;
+            }
+        }
+
+        if ($isActive) {
+            $activeInterviews++;
+        }
+        if ($isCompleted) {
+            $completedInterviews++;
+        }
+    }
+
+    $companyStats = array_values($companyStats);
+    $candidateStats = array_values($candidateStats);
+
+    usort($companyStats, function ($a, $b) {
+        return [$b['completed_interviews'], $b['total_interviews'], $a['name']]
+            <=> [$a['completed_interviews'], $a['total_interviews'], $b['name']];
+    });
+
+    usort($candidateStats, function ($a, $b) {
+        return [$b['total_interviews'], $b['completed_interviews'], $a['email']]
+            <=> [$a['total_interviews'], $a['completed_interviews'], $b['email']];
+    });
+
+    $companyCount = count($interviewers);
+    $candidateCount = count($interviewees);
+
+    return [
+        'overview' => [
+            'total_interviews' => $totalInterviews,
+            'completed_interviews' => $completedInterviews,
+            'active_interviews' => $activeInterviews,
+            'company_count' => $companyCount,
+            'candidate_count' => $candidateCount,
+            'avg_interviews_per_company' => $companyCount > 0 ? stats_round($totalInterviews / $companyCount) : 0,
+            'avg_interviews_per_candidate' => $candidateCount > 0 ? stats_round($totalInterviews / $candidateCount) : 0,
+            'avg_queue_per_company' => $companyCount > 0 ? stats_round($activeInterviews / $companyCount) : 0,
+            'avg_interview_time_minutes' => null,
+            'avg_interview_time_note' => 'Unavailable from current data: state_timestamp is overwritten on each state change.',
+        ],
+        'companies' => $companyStats,
+        'candidates' => $candidateStats,
+        'top_companies' => array_slice($companyStats, 0, 5),
+    ];
+}
+
 try {
     switch ($action) {
+        case 'stats_summary':
+            echo json_encode([
+                'ok' => true,
+                'stats' => build_stats_summary($db),
+            ]);
+            break;
 
         // ── List Companies ───────────────────────────────────────────────
         case 'list_companies':

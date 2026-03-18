@@ -49,6 +49,7 @@ $a->body_main = function () use ($is_authed) { ?>
             <button class="tab-btn active" onclick="switchTab('companies', this)">🏢 Companies</button>
             <button class="tab-btn" onclick="switchTab('candidates', this)">👤 Candidates</button>
             <button class="tab-btn" onclick="switchTab('operators', this)">👥 Operators</button>
+            <button class="tab-btn" onclick="switchTab('stats', this)">📈 Statistics</button>
             <button class="tab-btn style-test-btn" onclick="switchTab('testdata', this)">🧪 Test Data</button>
             <button onclick="showChangePassword()" class="btn-secondary-sm">🔑 Password</button>
             <button onclick="doLogout()" class="btn-danger-sm">Logout</button>
@@ -158,6 +159,107 @@ $a->body_main = function () use ($is_authed) { ?>
         </div>
 
         <!-- ── Test Data Tab ─────────────────────────────────────────────── -->
+        <div id="tab-stats" style="display: none;">
+            <div
+                style="background: var(--bg-secondary); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; border: 1px solid var(--border);">
+                <p style="margin: 0; font-size: 0.9rem; color: var(--text-secondary);">
+                    Read-only interview analytics computed from the current database. Loading this tab does not modify any records.
+                </p>
+            </div>
+
+            <div id="stats-overview" class="stats-grid">
+                <div class="stats-card">
+                    <div class="stats-card__label">Total interviews</div>
+                    <div id="stats-total-interviews" class="stats-card__value">-</div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-card__label">Completed interviews</div>
+                    <div id="stats-completed-interviews" class="stats-card__value">-</div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-card__label">Active queue/interviews</div>
+                    <div id="stats-active-interviews" class="stats-card__value">-</div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-card__label">Avg interviews / company</div>
+                    <div id="stats-avg-company" class="stats-card__value">-</div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-card__label">Avg interviews / candidate</div>
+                    <div id="stats-avg-candidate" class="stats-card__value">-</div>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-card__label">Avg queue / company</div>
+                    <div id="stats-avg-queue" class="stats-card__value">-</div>
+                </div>
+                <div class="stats-card stats-card--wide">
+                    <div class="stats-card__label">Average interview time</div>
+                    <div id="stats-avg-time" class="stats-card__value stats-card__value--sm">Unavailable</div>
+                    <div id="stats-avg-time-note" class="stats-card__hint"></div>
+                </div>
+            </div>
+
+            <div class="stats-panels">
+                <div class="superadmin-table-container">
+                    <h3 style="margin: 0 0 1rem 0;">Top Companies</h3>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="background: var(--bg-secondary); border-bottom: 2px solid var(--border);">
+                                <th style="padding: 0.75rem; text-align: left;">Company</th>
+                                <th style="padding: 0.75rem; text-align: center;">Completed</th>
+                                <th style="padding: 0.75rem; text-align: center;">Total</th>
+                                <th style="padding: 0.75rem; text-align: center;">Queue</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-top-companies">
+                            <tr>
+                                <td colspan="4" style="padding: 2rem; text-align: center; color: var(--text-secondary);">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="superadmin-table-container">
+                    <h3 style="margin: 0 0 1rem 0;">Interviews Per Company</h3>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="background: var(--bg-secondary); border-bottom: 2px solid var(--border);">
+                                <th style="padding: 0.75rem; text-align: left;">Company</th>
+                                <th style="padding: 0.75rem; text-align: center;">Total</th>
+                                <th style="padding: 0.75rem; text-align: center;">Completed</th>
+                                <th style="padding: 0.75rem; text-align: center;">Queue</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-stats-companies">
+                            <tr>
+                                <td colspan="4" style="padding: 2rem; text-align: center; color: var(--text-secondary);">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="superadmin-table-container" style="margin-top: 1rem;">
+                <h3 style="margin: 0 0 1rem 0;">Interviews Per Candidate</h3>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                    <thead>
+                        <tr style="background: var(--bg-secondary); border-bottom: 2px solid var(--border);">
+                            <th style="padding: 0.75rem; text-align: left;">Candidate</th>
+                            <th style="padding: 0.75rem; text-align: left;">Email</th>
+                            <th style="padding: 0.75rem; text-align: center;">Total</th>
+                            <th style="padding: 0.75rem; text-align: center;">Completed</th>
+                            <th style="padding: 0.75rem; text-align: center;">Queue</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-stats-candidates">
+                        <tr>
+                            <td colspan="5" style="padding: 2rem; text-align: center; color: var(--text-secondary);">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <div id="tab-testdata" style="display: none;">
             <div
                 style="background: var(--bg-secondary); padding: 1.5rem; border-radius: var(--radius-md); border: 1px solid var(--border); max-width: 600px; margin: 0 auto;">
@@ -332,6 +434,52 @@ $a->body_main = function () use ($is_authed) { ?>
 $a->assemble(); ?>
 
 <style>
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .stats-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 1rem;
+    }
+
+    .stats-card--wide {
+        grid-column: 1 / -1;
+    }
+
+    .stats-card__label {
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .stats-card__value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .stats-card__value--sm {
+        font-size: 1.2rem;
+    }
+
+    .stats-card__hint {
+        margin-top: 0.4rem;
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+    }
+
+    .stats-panels {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 1rem;
+    }
+
     .superadmin-tabs .style-test-btn {
         background: rgba(245, 158, 11, 0.1);
         color: var(--brand-orange);
@@ -491,6 +639,7 @@ $a->assemble(); ?>
     const API = '/costas/os_api.php';
     let companiesData = [];
     let candidatesData = [];
+    let statsData = null;
 
     // ── Utility ──────────────────────────────────────────────────────────────
     function toast(msg, isError = false) {
@@ -554,6 +703,7 @@ $a->assemble(); ?>
         document.getElementById('tab-companies').style.display = tab === 'companies' ? 'block' : 'none';
         document.getElementById('tab-candidates').style.display = tab === 'candidates' ? 'block' : 'none';
         document.getElementById('tab-operators').style.display = tab === 'operators' ? 'block' : 'none';
+        document.getElementById('tab-stats').style.display = tab === 'stats' ? 'block' : 'none';
         document.getElementById('tab-testdata').style.display = tab === 'testdata' ? 'block' : 'none';
 
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -562,6 +712,7 @@ $a->assemble(); ?>
         if (tab === 'companies') loadCompanies();
         else if (tab === 'candidates') loadCandidates();
         else if (tab === 'operators') loadOperators();
+        else if (tab === 'stats') loadStats();
     }
 
     // ── Companies ────────────────────────────────────────────────────────────
@@ -647,6 +798,65 @@ $a->assemble(); ?>
         const res = await apiCall({ action: 'list_operators' });
         if (!res.ok) { toast(res.error, true); return; }
         renderOperators(res.operators);
+    }
+
+    async function loadStats() {
+        const res = await apiCall({ action: 'stats_summary' });
+        if (!res.ok) { toast(res.error, true); return; }
+        statsData = res.stats;
+        renderStats(statsData);
+    }
+
+    function renderStats(stats) {
+        const overview = stats.overview || {};
+        document.getElementById('stats-total-interviews').textContent = formatNumber(overview.total_interviews);
+        document.getElementById('stats-completed-interviews').textContent = formatNumber(overview.completed_interviews);
+        document.getElementById('stats-active-interviews').textContent = formatNumber(overview.active_interviews);
+        document.getElementById('stats-avg-company').textContent = formatNumber(overview.avg_interviews_per_company);
+        document.getElementById('stats-avg-candidate').textContent = formatNumber(overview.avg_interviews_per_candidate);
+        document.getElementById('stats-avg-queue').textContent = formatNumber(overview.avg_queue_per_company);
+        document.getElementById('stats-avg-time').textContent =
+            overview.avg_interview_time_minutes == null ? 'Unavailable' : `${formatNumber(overview.avg_interview_time_minutes)} min`;
+        document.getElementById('stats-avg-time-note').textContent = overview.avg_interview_time_note || '';
+
+        const topCompanies = stats.top_companies || [];
+        const companies = stats.companies || [];
+        const candidates = stats.candidates || [];
+
+        document.getElementById('tbody-top-companies').innerHTML = renderStatsCompaniesRows(topCompanies, 4, 'No completed interviews yet.');
+        document.getElementById('tbody-stats-companies').innerHTML = renderStatsCompaniesRows(companies, 4, 'No companies found.');
+        document.getElementById('tbody-stats-candidates').innerHTML = renderStatsCandidatesRows(candidates, 5);
+    }
+
+    function renderStatsCompaniesRows(list, colspan, emptyMessage) {
+        if (!list.length) {
+            return `<tr><td colspan="${colspan}" style="padding: 2rem; text-align: center; color: var(--text-secondary);">${emptyMessage}</td></tr>`;
+        }
+
+        return list.map(c => `
+            <tr>
+                <td style="padding: 0.5rem 0.75rem; font-weight: 600;">${esc(c.name)}</td>
+                <td style="padding: 0.5rem 0.75rem; text-align: center;">${formatNumber(c.completed_interviews)}</td>
+                <td style="padding: 0.5rem 0.75rem; text-align: center;">${formatNumber(c.total_interviews)}</td>
+                <td style="padding: 0.5rem 0.75rem; text-align: center;">${formatNumber(c.active_queue)}</td>
+            </tr>
+        `).join('');
+    }
+
+    function renderStatsCandidatesRows(list, colspan) {
+        if (!list.length) {
+            return `<tr><td colspan="${colspan}" style="padding: 2rem; text-align: center; color: var(--text-secondary);">No candidates found.</td></tr>`;
+        }
+
+        return list.map(c => `
+            <tr>
+                <td style="padding: 0.5rem 0.75rem;">${esc(c.display_name || '-')}</td>
+                <td style="padding: 0.5rem 0.75rem;">${esc(c.email)}</td>
+                <td style="padding: 0.5rem 0.75rem; text-align: center;">${formatNumber(c.total_interviews)}</td>
+                <td style="padding: 0.5rem 0.75rem; text-align: center;">${formatNumber(c.completed_interviews)}</td>
+                <td style="padding: 0.5rem 0.75rem; text-align: center;">${formatNumber(c.active_queue)}</td>
+            </tr>
+        `).join('');
     }
 
     function renderOperators(list) {
@@ -931,6 +1141,11 @@ $a->assemble(); ?>
         const d = document.createElement('div');
         d.textContent = str;
         return d.innerHTML;
+    }
+
+    function formatNumber(value) {
+        const number = Number(value ?? 0);
+        return Number.isFinite(number) ? number.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '-';
     }
 
     // ── Init ─────────────────────────────────────────────────────────────────
