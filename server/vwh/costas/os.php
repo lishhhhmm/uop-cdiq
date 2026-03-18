@@ -225,8 +225,8 @@ $a->body_main = function () use ($is_authed) { ?>
                         <thead>
                             <tr style="background: var(--bg-secondary); border-bottom: 2px solid var(--border);">
                                 <th style="padding: 0.75rem; text-align: left;">Company</th>
-                                <th style="padding: 0.75rem; text-align: center;">Total</th>
                                 <th style="padding: 0.75rem; text-align: center;">Completed</th>
+                                <th style="padding: 0.75rem; text-align: center;">Total</th>
                                 <th style="padding: 0.75rem; text-align: center;">Queue</th>
                             </tr>
                         </thead>
