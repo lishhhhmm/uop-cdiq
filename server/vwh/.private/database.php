@@ -867,6 +867,8 @@ class CandidateSelfRegister extends UpdateRequest
 	) {
 		parent::__construct($update_id_known);
 
+		$this->bypass_update_id_check = true;
+
 		$email = filter_var(trim($email), FILTER_SANITIZE_EMAIL);
 		if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 			throw new InvalidArgumentException('invalid email address');
