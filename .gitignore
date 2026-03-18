@@ -6,5 +6,6 @@
 /server/pkey
 
 /server/vwh/resources/images/interviewer/i*
+/server/vwh/resources/cv/cv*
 
 **/__pycache__
